@@ -319,7 +319,7 @@ class Engine:
         # The ALL-TIME Median Record uses the entire pack's peak performance (all 256 cars).
         # This prevents the median from being falsely skewed if only 2 elite cars survive.
         
-        survival_rate = (len(survivors) / len(cars)) * 100.0 if cars else 0.0
+        survival_rate = (len(survivors) / len(car_ai.cars)) * 100.0 if car_ai.cars else 0.0
         if gen_best_median > self.all_time_best_median[0]:
             self.all_time_best_median = (gen_best_median, car_ai.TOTAL_GENERATIONS)
 

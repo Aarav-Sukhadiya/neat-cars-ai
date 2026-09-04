@@ -98,36 +98,41 @@ print("Massive complex track generated successfully!")
 import json
 # Generate Checkpoints automatically along the spine
 checkpoints = []
-# Skip every 5 points to space them out
-# A checkpoint is a line perpendicular to the path
-for i in range(5, len(smooth_points) - 1, 5):
+# Calculate evenly spaced checkpoints based on actual distance
+accumulated_dist = 0.0
+checkpoint_spacing = 150.0  # Place a checkpoint exactly every 150 pixels
+
+for i in range(1, len(smooth_points) - 1):
+    p0 = smooth_points[i-1]
     p1 = smooth_points[i]
     p2 = smooth_points[i+1]
     
-    # Calculate direction vector
-    dx = p2[0] - p1[0]
-    dy = p2[1] - p1[1]
+    segment_dist = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+    accumulated_dist += segment_dist
     
-    # Normalize
-    length = math.hypot(dx, dy)
-    if length == 0: continue
-    dx /= length
-    dy /= length
-    
-    # Perpendicular vector (rotate 90 degrees)
-    nx = -dy
-    ny = dx
-    
-    # Width of checkpoint (make it wider than road to ensure they cross it)
-    width = 120
-    
-    # Checkpoint line segment
-    cx1 = p1[0] + nx * width
-    cy1 = p1[1] + ny * width
-    cx2 = p1[0] - nx * width
-    cy2 = p1[1] - ny * width
-    
-    checkpoints.append([int(cx1), int(cy1), int(cx2), int(cy2)])
+    if accumulated_dist >= checkpoint_spacing:
+        accumulated_dist = 0.0
+        
+        # Calculate direction vector using p0 and p2 for a smoother tangent
+        dx = p2[0] - p0[0]
+        dy = p2[1] - p0[1]
+        
+        length = math.hypot(dx, dy)
+        if length == 0: continue
+        dx /= length
+        dy /= length
+        
+        # Perpendicular vector
+        nx = -dy
+        ny = dx
+        
+        width = 120
+        cx1 = p1[0] + nx * width
+        cy1 = p1[1] + ny * width
+        cx2 = p1[0] - nx * width
+        cy2 = p1[1] - ny * width
+        
+        checkpoints.append([int(cx1), int(cy1), int(cx2), int(cy2)])
 
 with open("data/checkpoints.json", "w") as f:
     json.dump(checkpoints, f, indent=4)

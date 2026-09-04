@@ -18,8 +18,6 @@ from src.render.stats_panel import StatsPanel
 class Engine:
     WIDTH = 1900
     HEIGHT = 1080
-    TRACK_WIDTH = 4000
-    TRACK_HEIGHT = 4000
     SIDEBAR_WIDTH = 400
     FPS = 60
     DEFAULT_FONT = "comicsansms"

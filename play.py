@@ -104,8 +104,7 @@ def main():
         start_angle = track_data.get("start_angle", 0)
         checkpoints_path = track_data.get("checkpoints", None)
         
-        # We need to find the width/height of the track image. Pygame will do this when loaded.
-        track_w, track_h = 4000, 4000  # Defaults, will be overridden by the actual image
+        # Width/height will be read directly from the image file below
         
     else:
         print(f"Invalid track ID. Choose between 0 and {len(track_keys) - 1}.")

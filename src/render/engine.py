@@ -264,6 +264,18 @@ class Engine:
                 # Blit track with camera offset
                 self.screen.blit(self.track.get_surface(), (-self.camera.offset_x, -self.camera.offset_y))
                 
+                # Draw checkpoints
+                if hasattr(car_ai, 'checkpoints') and car_ai.checkpoints:
+                    for i, cp in enumerate(car_ai.checkpoints):
+                        # cp is [x1, y1, x2, y2]
+                        # Apply camera offset
+                        shifted_p1 = self.camera.apply((cp[0], cp[1]))
+                        shifted_p2 = self.camera.apply((cp[2], cp[3]))
+                        
+                        # Draw in a faint orange/yellow so it's visible but not distracting
+                        color = (255, 165, 0) if i > 0 else (0, 255, 0) # Start line is green
+                        pygame.draw.line(self.screen, color, shifted_p1, shifted_p2, 2)
+                        
                 for car in car_ai.cars:
                     if car.alive:
                         car.draw(self.screen, self.camera)

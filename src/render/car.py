@@ -63,6 +63,7 @@ class Car:
         self.has_been_rendered_as_dead = False
         
         self.driven_distance = 0
+        self.frames_alive = 0
         self.speed_penalty = 0
         track_width = track.width
         track_height = track.height

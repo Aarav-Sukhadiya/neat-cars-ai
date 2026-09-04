@@ -170,8 +170,14 @@ def main():
 
         # 2. Checkpoints
         if car.checkpoints:
-            for cp in car.checkpoints:
-                pygame.draw.line(screen, (0, 255, 0), w2s(cp[0], cp[1]), w2s(cp[2], cp[3]), max(1, int(2*zoom)))
+            font = pygame.font.SysFont("monospace", max(10, int(14*zoom)))
+            for i, cp in enumerate(car.checkpoints):
+                p1, p2 = w2s(cp[0], cp[1]), w2s(cp[2], cp[3])
+                pygame.draw.line(screen, (0, 255, 0), p1, p2, max(1, int(2*zoom)))
+                # Number them
+                cx, cy = (p1[0]+p2[0])//2, (p1[1]+p2[1])//2
+                txt = font.render(str(i+1), True, (255, 255, 255))
+                screen.blit(txt, (cx - txt.get_width()//2, cy - txt.get_height()//2))
 
         # 3. Car & Sensors
         if car.alive:

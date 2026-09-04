@@ -24,8 +24,8 @@ class Action:
 
 class Car:
 
-    CAR_SIZE_X = 60
-    CAR_SIZE_Y = 60
+    CAR_SIZE_X = 30
+    CAR_SIZE_Y = 30
 
     MINIMUM_SPEED = 10
     ANGLE_INCREMENT = 10

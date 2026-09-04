@@ -50,7 +50,7 @@ def generate_spline(points, num_points=20):
     # Pad to make it loop smoothly
     padded = [points[-2]] + points + [points[1], points[2]]
     spline_pts = []
-    for i in range(1, len(padded)-2):
+    for i in range(1, len(padded)-3):
         spline_pts.extend(catmull_rom_spline(padded[i-1], padded[i], padded[i+1], padded[i+2], num_points))
     return spline_pts
 

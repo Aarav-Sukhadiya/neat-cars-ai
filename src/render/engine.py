@@ -425,6 +425,28 @@ class Engine:
         if gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_survival > 25:
             if hasattr(self, 'StagnationTermination'):
                 raise self.StagnationTermination()
+                
+        # --- EXPLICIT VRAM OPTIMIZATION ---
+        # Force garbage collection and empty PyTorch/CuPy memory pools
+        # to guarantee perfectly lossless VRAM footprint across generations.
+        import gc
+        import torch
+        
+        if hasattr(car_ai, '_gpu_inference'):
+            del car_ai._gpu_inference
+            
+        del car_ai
+        gc.collect()
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
+        try:
+            import cupy as cp
+            if hasattr(cp, 'get_default_memory_pool'):
+                cp.get_default_memory_pool().free_all_blocks()
+        except ImportError:
+            pass
 
     # pragma: no cover
     def run(self):

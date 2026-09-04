@@ -13,6 +13,51 @@ WIDTH = 1920
 HEIGHT = 1080
 SIDEBAR_WIDTH = 300
 
+class HumanCar(Car):
+    def __init__(self, position, track, checkpoints):
+        super().__init__(position, track, checkpoints=checkpoints)
+        self.speed = 0.0
+
+    def handle_input(self, keys):
+        if keys[pygame.K_w]:
+            self.speed += 0.5
+        elif keys[pygame.K_s]:
+            self.speed -= 1.0  # Stronger brakes
+        else:
+            # Friction
+            if self.speed > 0:
+                self.speed -= 0.25
+            elif self.speed < 0:
+                self.speed += 0.25
+            if abs(self.speed) < 0.3:
+                self.speed = 0
+
+        # Cap speed
+        self.speed = max(-10.0, min(self.speed, 25.0))
+
+        # Steering feels better when it's crisp, and flips in reverse
+        if abs(self.speed) > 0.5:
+            turn_speed = 6.0
+            steer_dir = 1 if self.speed > 0 else -1
+            if keys[pygame.K_a]:
+                self.angle += turn_speed * steer_dir
+            if keys[pygame.K_d]:
+                self.angle -= turn_speed * steer_dir
+
+    def update_sprite(self, track: pygame.Surface) -> None:
+        import math
+        self.update_center()
+        radians = math.radians(360 - self.angle)
+        self.position[0] += math.cos(radians) * self.speed
+        self.position[1] += math.sin(radians) * self.speed
+        
+        self.refresh_corners_positions()
+        self.check_collision(track)
+        
+        self.sensors.clear()
+        for sensor_angle in [-90, -45, -20, 0, 20, 45, 90]:
+            self.check_sensor(sensor_angle, track)
+
 def main():
     parser = argparse.ArgumentParser(description="Play Neat Cars manually using WASD!")
     parser.add_argument('--track', type=int, default=0, help="Track ID to play (0=Massive, 1=Intersection, 2=Super Hard)")
@@ -63,7 +108,7 @@ def main():
         with open(checkpoints_path, 'r') as f:
             checkpoints = json.load(f)
 
-    car = Car(start_pos, track, checkpoints=checkpoints)
+    car = HumanCar(start_pos, track, checkpoints)
 
     font = pygame.font.SysFont(None, 36)
 
@@ -76,21 +121,12 @@ def main():
             # Reset car if dead
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r and not car.alive:
-                    car = Car(start_pos, track, checkpoints=checkpoints)
+                    car = HumanCar(start_pos, track, checkpoints)
 
         # Handle Keyboard Input
         keys = pygame.key.get_pressed()
         if car.alive:
-            if keys[pygame.K_w]:
-                car.accelerate()
-            if keys[pygame.K_s]:
-                car.brake()
-            if keys[pygame.K_a]:
-                car.turn_left()
-            if keys[pygame.K_d]:
-                car.turn_right()
-                
-            # Physics update
+            car.handle_input(keys)
             car.update_sprite(track.surface)
 
         camera.update(car.center)

@@ -52,7 +52,7 @@ class HumanCar(Car):
         self.position[1] += math.sin(radians) * self.speed
         
         self.refresh_corners_positions()
-        self.check_collision(track)
+        # self.check_collision(track)  # God mode: No crashing!
         
         self.sensors.clear()
         for sensor_angle in [-90, -45, -20, 0, 20, 45, 90]:

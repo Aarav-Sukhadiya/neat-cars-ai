@@ -31,7 +31,7 @@ class Engine:
         
         self.all_time_best_fitness = (0.0, 0)
         self.all_time_best_median = (0.0, 0)
-        self.all_time_top_speed = (0.0, 0)
+        self.all_time_survival_rate = (0.0, 0)
         self.prev_gen_stats = None
         
         # In headless mode we do not initialize a display window!
@@ -243,7 +243,7 @@ class Engine:
                     print(f" Time Left     : {frames_left/60.0:.1f}s / {CarAI.MAX_FRAMES/60.0:.1f}s (Virtual)")
                     print(f" Best Fitness  : {car_ai.best_fitness:,.1f}")
                     print(f" Median Fitness: {median_fitness:,.1f}")
-                    print(f" Top Speed     : {max_speed:.1f} px/s")
+                    print(f" Survival Rate : {(car_ai.remaining_cars / total_cars * 100.0):.1f}%")
                     print(f" Brain Size    : {best_net_nodes} Nodes / {best_net_conns} Conns")
                     print("==================================================")
                     if self.prev_gen_stats:
@@ -251,13 +251,13 @@ class Engine:
                         print("==================================================")
                         print(f" Best Fitness  : {self.prev_gen_stats['best_fitness']:,.1f}")
                         print(f" Peak Median   : {self.prev_gen_stats['median_fitness']:,.1f}")
-                        print(f" Top Speed     : {self.prev_gen_stats['top_speed']:.1f} px/s")
+                        print(f" Survival Rate : {(car_ai.remaining_cars / total_cars * 100.0):.1f}%")
                         print("==================================================")
                     print(f" ALL-TIME RECORDS (Across Generations)")
                     print("==================================================")
                     print(f" Highest Fitness      : {self.all_time_best_fitness[0]:,.1f} (Gen {self.all_time_best_fitness[1]})")
                     print(f" Highest Median Score : {self.all_time_best_median[0]:,.1f} (Gen {self.all_time_best_median[1]})")
-                    print(f" Highest Top Speed    : {self.all_time_top_speed[0]:.1f} px/s (Gen {self.all_time_top_speed[1]})")
+                    print(f" Highest Survival Rate: {self.all_time_survival_rate[0]:.1f} % (Gen {self.all_time_survival_rate[1]})")
                     print("==================================================")
             else:
                 self.screen.fill((15, 15, 20))
@@ -297,6 +297,8 @@ class Engine:
 
         # The ALL-TIME Median Record uses the entire pack's peak performance (all 256 cars).
         # This prevents the median from being falsely skewed if only 2 elite cars survive.
+        
+        survival_rate = (len(survivors) / len(cars)) * 100.0 if cars else 0.0
         if gen_best_median > self.all_time_best_median[0]:
             self.all_time_best_median = (gen_best_median, car_ai.TOTAL_GENERATIONS)
 
@@ -312,8 +314,8 @@ class Engine:
 
             if best_survivor_fit > self.all_time_best_fitness[0]:
                 self.all_time_best_fitness = (best_survivor_fit, car_ai.TOTAL_GENERATIONS)
-            if best_survivor_speed > self.all_time_top_speed[0]:
-                self.all_time_top_speed = (best_survivor_speed, car_ai.TOTAL_GENERATIONS)
+            if survival_rate > self.all_time_survival_rate[0]:
+                self.all_time_survival_rate = (survival_rate, car_ai.TOTAL_GENERATIONS)
 
         # Save final generation stats to display next round
         # As requested, only show the best fitness and top speed of ALIVE cars from that generation.
@@ -321,7 +323,7 @@ class Engine:
             'gen': car_ai.TOTAL_GENERATIONS,
             'best_fitness': best_survivor_fit,
             'median_fitness': gen_best_median,
-            'top_speed': best_survivor_speed
+            'survival_rate': survival_rate
         }
 
         # GENERATION ENDED: Update Hall of Fame
@@ -349,9 +351,9 @@ class Engine:
         # If the Highest Fitness, Median Score, and Top Speed were all set more than 25 generations ago
         gen_diff_fitness = car_ai.TOTAL_GENERATIONS - self.all_time_best_fitness[1]
         gen_diff_median = car_ai.TOTAL_GENERATIONS - self.all_time_best_median[1]
-        gen_diff_speed = car_ai.TOTAL_GENERATIONS - self.all_time_top_speed[1]
+        gen_diff_survival = car_ai.TOTAL_GENERATIONS - self.all_time_survival_rate[1]
         
-        if gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_speed > 25:
+        if gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_survival > 25:
             if hasattr(self, 'StagnationTermination'):
                 raise self.StagnationTermination()
 

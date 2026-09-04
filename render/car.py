@@ -37,19 +37,40 @@ class Car:
 
     COLLISION_SURFACE_COLOR = Color.WHITE
 
-    DRAW_SENSORS = True
+    DRAW_SENSORS = False
     SENSORS_DRAW_DISTANCE = 1920
 
-    def __init__(self, start_position: list, track: Track):
-        # The _sprite is the untouched sprite (not rotated) while the sprite is the one which will be moved around
-        self._sprite = pygame.image.load(CAR_SPRITE_PATH).convert_alpha()
+    # Class-level sprite cache: loaded once, shared across all cars every generation.
+    # This eliminates ~490ms of pygame.image.load + convert_alpha per generation start.
+    _shared_sprite: pygame.Surface = None
+    _shared_dead_sprite: pygame.Surface = None
 
-        # Scale Sprite
-        self._sprite = pygame.transform.scale(
-            self._sprite, (Car.CAR_SIZE_X, Car.CAR_SIZE_Y)
-        )
+    @classmethod
+    def _get_shared_sprite(cls) -> pygame.Surface:
+        if cls._shared_sprite is None:
+            s = pygame.image.load(CAR_SPRITE_PATH)
+            cls._shared_sprite = pygame.transform.scale(s, (cls.CAR_SIZE_X, cls.CAR_SIZE_Y))
+        return cls._shared_sprite
 
-        # Assigning the current sprite to this variable sprite (the one which will be rotated) we need this to avoid out of memory errors from pygame
+    @classmethod
+    def _get_shared_dead_sprite(cls) -> pygame.Surface:
+        if cls._shared_dead_sprite is None:
+            s = pygame.image.load(DEAD_CAR_SPRITE_PATH)
+            cls._shared_dead_sprite = pygame.transform.scale(s, (cls.CAR_SIZE_X, cls.CAR_SIZE_Y))
+        return cls._shared_dead_sprite
+
+    def __init__(self, start_position: list, track: Track, checkpoints: list = None):
+        self.checkpoints = checkpoints or []
+        self.current_checkpoint_index = 0
+        self.frames_since_last_checkpoint = 0
+        self.checkpoint_fitness = 0.0
+        self.max_fitness_achieved = -float('inf')
+        self.old_position = start_position.copy()
+        # Use shared class-level sprite (loaded once, never per-car per-generation)
+        self._sprite = self._get_shared_sprite()
+
+        # Assigning the current sprite to this variable sprite (the one which will be rotated)
+        # we need this to avoid out of memory errors from pygame
         self.sprite = self._sprite
 
         self.position = start_position.copy()
@@ -88,12 +109,9 @@ class Car:
         if self.alive:
             track.blit(self.sprite, self.position)
         else:
-            # Change the sprite color of the car to a black and white one
+            # Switch to the dead sprite (loaded once via class-level cache)
             if not self.has_been_rendered_as_dead:
-                self._sprite = pygame.image.load(DEAD_CAR_SPRITE_PATH).convert_alpha()
-                self._sprite = pygame.transform.scale(
-                    self._sprite, (Car.CAR_SIZE_X, Car.CAR_SIZE_Y)
-                )
+                self._sprite = self._get_shared_dead_sprite()
                 self.update_center()
                 self.has_been_rendered_as_dead = True
             track.blit(self.sprite, self.position)
@@ -194,17 +212,87 @@ class Car:
         min_sensor_distance = min(sensor[1] for sensor in self.sensors) if self.sensors else self.CAR_SIZE_X
         self.minimum_speed = max(self.CAR_SIZE_X / 6, min_sensor_distance / 20)
 
+    _ROTATED_SPRITES_CACHE = {}
+
     def update_center(self) -> None:
         """Update the center of the car after a rotation (when it turns left or right)"""
-        sprite_as_rect = self._sprite.get_rect()
-        rotated_sprite = pygame.transform.rotate(self._sprite, self.angle)
-        sprite_as_rect.center = rotated_sprite.get_rect().center
-        self.sprite = rotated_sprite.subsurface(sprite_as_rect)
+        
+        # Pull from cache instead of rotating dynamically every frame
+        if self.angle not in Car._ROTATED_SPRITES_CACHE:
+            sprite_as_rect = self._sprite.get_rect()
+            rotated_sprite = pygame.transform.rotate(self._sprite, self.angle)
+            sprite_as_rect.center = rotated_sprite.get_rect().center
+            Car._ROTATED_SPRITES_CACHE[self.angle] = rotated_sprite.subsurface(sprite_as_rect)
+            
+        self.sprite = Car._ROTATED_SPRITES_CACHE[self.angle]
         # Calculate New Center
         self.center = [
             int(self.position[0]) + Car.CAR_SIZE_X / 2,
             int(self.position[1]) + Car.CAR_SIZE_Y / 2
         ]
+
+    def inject_sensors(self, distances: list, hit_points: list) -> None:
+        """Inject pre-computed (GPU) sensor data instead of running the per-car raycast loop.
+
+        Args:
+            distances (list[float]): List of 5 sensor distances.
+            hit_points (list[tuple]): List of 5 (x, y) hit-point tuples.
+        """
+        self.sensors = [[(int(hx), int(hy)), int(d)] for (hx, hy), d in zip(hit_points, distances)]
+
+    def distance_to_line(self, p, line_start, line_end):
+        """Calculate the shortest distance from point p to a line segment."""
+        px, py = p
+        sx, sy = line_start
+        ex, ey = line_end
+        
+        line_mag = math.hypot(ex - sx, ey - sy)
+        if line_mag == 0:
+            return math.hypot(px - sx, py - sy)
+            
+        u = ((px - sx) * (ex - sx) + (py - sy) * (ey - sy)) / (line_mag ** 2)
+        u = max(0, min(1, u))
+        ix = sx + u * (ex - sx)
+        iy = sy + u * (ey - sy)
+        return math.hypot(px - ix, py - iy)
+
+    def update_physics(self, track: pygame.Surface) -> None:
+        """Update car physics (position, collision) WITHOUT computing sensors."""
+        old_center = self.center.copy() if hasattr(self, 'center') and self.center else [self.position[0], self.position[1]]
+        self.update_center()
+
+        radians = math.radians(360 - self.angle)
+        cos = math.cos(radians)
+        sin = math.sin(radians)
+
+        self.position[0] += cos * self.speed
+        self.position[1] += sin * self.speed
+        
+        self.update_center()
+        new_center = self.center
+
+        if self.alive and self.checkpoints:
+            target_cp = self.checkpoints[self.current_checkpoint_index % len(self.checkpoints)]
+            p3, p4 = (target_cp[0], target_cp[1]), (target_cp[2], target_cp[3])
+            
+            def ccw(A, B, C):
+                return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+            
+            intersect = ccw(old_center, new_center, p3) != ccw(old_center, new_center, p4) and \
+                        ccw(old_center, p3, p4) != ccw(new_center, p3, p4)
+                        
+            if intersect:
+                self.current_checkpoint_index += 1
+                self.checkpoint_fitness += 1000.0 + max(0.0, 500.0 - self.frames_since_last_checkpoint)
+                self.frames_since_last_checkpoint = 0
+                
+            self.frames_since_last_checkpoint += 1
+            if self.frames_since_last_checkpoint > 300: # Dead if stuck for 5 seconds
+                self.alive = False
+
+        self.update_adaptive_parameters()
+        self.refresh_corners_positions()
+        self.check_collision(track)
 
     def update_sprite(self, track: pygame.Surface) -> None:
         """Update the sprite of the car and its new informations (position, center, sensors, etc.)"""
@@ -250,26 +338,25 @@ class Car:
         return distances
 
     def get_reward(self) -> float:
-        """
-        Get the reward of the car based on multiple factors such as:
-        - Driven distance: Encourages the car to go farther
-        - Speed: Encourages the car to maintain a reasonable speed
-        - Malus: Penalizes the car for going too slow or taking unwanted actions
-        Returns:
-            float: The calculated reward
-        """
+        if not self.checkpoints:
+            # Fallback if the user hasn't drawn any checkpoints yet
+            distance_reward = self.driven_distance / self.DISTANCE_NORMALIZER
+            speed_reward = (self.speed / self.MAX_EXPECTED_SPEED) ** 0.5
+            malus = self.speed_penalty / self.penalty_factor
+            progress_factor = min(1.0, self.driven_distance / (self.track_diagonal * 0.75))
+            return (distance_reward + speed_reward - malus) * (1 + progress_factor)
 
-        distance_reward = self.driven_distance / self.DISTANCE_NORMALIZER
+        # NEW METRIC: Pure Checkpoint Progression
+        target_cp = self.checkpoints[self.current_checkpoint_index % len(self.checkpoints)]
+        dist_to_next = self.distance_to_line(self.center, (target_cp[0], target_cp[1]), (target_cp[2], target_cp[3]))
         
-        speed_reward = (self.speed / self.MAX_EXPECTED_SPEED) ** 0.5
-        
-        malus = self.speed_penalty / self.penalty_factor
-        
-        progress_factor = min(1.0, self.driven_distance / (self.track_diagonal * 0.75))
-        
-        final_reward = (distance_reward + speed_reward - malus) * (1 + progress_factor)
-        
-        return final_reward
+        # Smooth interpolation: base checkpoint score + how close it is to the NEXT checkpoint
+        # We subtract the distance so that moving closer to the checkpoint INCREASES fitness.
+        current_fit = self.checkpoint_fitness - dist_to_next
+        if current_fit > self.max_fitness_achieved:
+            self.max_fitness_achieved = current_fit
+            
+        return self.max_fitness_achieved
 
     
     def accelerate(self) -> None:

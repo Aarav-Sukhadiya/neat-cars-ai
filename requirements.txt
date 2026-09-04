@@ -1,3 +1,6 @@
 pygame
 neat-python
 numpy
+# GPU acceleration (CUDA 12.x required; install manually if auto-install fails)
+torch
+cupy

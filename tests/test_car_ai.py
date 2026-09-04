@@ -32,6 +32,7 @@ class TestCarAI(unittest.TestCase):
         
         # Kill one car manually
         car_ai.cars[0].alive = False
+        if hasattr(car_ai, 'vector_physics'): car_ai.vector_physics.alive[0] = False
         
         # Since CarAI remaining_cars is tracked manually or computed in `compute`,
         # let's call compute on a dummy surface (black)

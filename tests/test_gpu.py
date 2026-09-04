@@ -212,7 +212,7 @@ class Test2_GPURaycast(unittest.TestCase):
         gpu_dist, gpu_hx, gpu_hy = raycast.compute(
             self.wall_pixels, self.cx, self.cy, self.angles
         )
-        SENSOR_ANGLES = [-90, -45, 0, 45, 90]
+        SENSOR_ANGLES = [-90, -45, -20, 0, 20, 45, 90]
         print()
         all_pass = True
         for si, sa in enumerate(SENSOR_ANGLES):
@@ -236,7 +236,7 @@ class Test2_GPURaycast(unittest.TestCase):
         angles = np.zeros(N, dtype=np.float32)
         raycast = GPURaycast(self.track_w, self.track_h)
         dist, _, _ = raycast.compute(self.wall_pixels, cx, cy, angles)
-        self.assertEqual(dist.shape, (N, 5))
+        self.assertEqual(dist.shape, (N, 7))
         for i in range(1, N):
             np.testing.assert_array_almost_equal(dist[0], dist[i], decimal=0,
                 err_msg=f"Car {i} differs from car 0")
@@ -250,9 +250,9 @@ class Test2_GPURaycast(unittest.TestCase):
         cy     = np.random.uniform(50, 250, N).astype(np.float32)
         angles = np.random.uniform(0, 360, N).astype(np.float32)
         dist, hx, hy = raycast.compute(self.wall_pixels, cx, cy, angles)
-        self.assertEqual(dist.shape, (N, 5))
-        self.assertEqual(hx.shape,   (N, 5))
-        self.assertEqual(hy.shape,   (N, 5))
+        self.assertEqual(dist.shape, (N, 7))
+        self.assertEqual(hx.shape,   (N, 7))
+        self.assertEqual(hy.shape,   (N, 7))
 
 
 # -----------------------------------------------------------------------

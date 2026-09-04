@@ -201,7 +201,7 @@ class CarAI:
         for li, i in enumerate(alive_indices):
             if self.vector_physics.alive[i]:
                 self.remaining_cars += 1
-                fit = self.vector_physics.max_fitness[i]
+                fit = float(self.vector_physics.max_fitness[i])
                 self.genomes[i][1].fitness = fit
                 if fit > self.best_fitness:
                     self.best_fitness = fit

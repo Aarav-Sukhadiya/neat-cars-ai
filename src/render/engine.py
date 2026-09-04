@@ -24,7 +24,7 @@ class Engine:
     FPS = 60
     DEFAULT_FONT = "comicsansms"
 
-    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False):
+    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False, track_id: int = 0):
         self.neat_config_path = neat_config_path
         self.debug = debug
         self.max_simulations = max_simulations
@@ -45,9 +45,16 @@ class Engine:
         if os.path.exists("config/track_config.json"):
             with open("config/track_config.json", "r") as f:
                 tconfig = json.load(f)
+                tracks_dict = tconfig.get("tracks", {})
+                track_keys = list(tracks_dict.keys())
                 curr = tconfig.get("current_track", "")
-                if curr in tconfig.get("tracks", {}):
-                    track_data = tconfig["tracks"][curr]
+                
+                # Override with track_id if valid
+                if 0 <= track_id < len(track_keys):
+                    curr = track_keys[track_id]
+                    
+                if curr in tracks_dict:
+                    track_data = tracks_dict[curr]
                     self.track_image_path = track_data.get("image", self.track_image_path)
                     self.checkpoints_path = track_data.get("checkpoints", self.checkpoints_path)
                     if "start_pos" in track_data:
@@ -56,6 +63,8 @@ class Engine:
                             track_data["start_pos"][0] - Car.CAR_SIZE_X / 2, 
                             track_data["start_pos"][1] - Car.CAR_SIZE_Y / 2
                         ]
+                    if "start_angle" in track_data:
+                        Car.DEFAULT_ANGLE = track_data["start_angle"]
                     if "max_frames" in track_data:
                         CarAI.MAX_FRAMES = track_data["max_frames"]
         

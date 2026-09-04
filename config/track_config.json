@@ -6,7 +6,22 @@
             "image": "assets/tracks/massive_loop.png",
             "checkpoints": "data/tracks/massive_loop.json",
             "max_frames": 3600,
-            "start_pos": [200, 950]
+            "start_pos": [
+                200,
+                950
+            ],
+            "start_angle": 0
+        },
+        "intersection_loop": {
+            "name": "Intersection Loop",
+            "image": "assets/tracks/intersection_loop.png",
+            "checkpoints": "data/tracks/intersection_loop.json",
+            "max_frames": 3600,
+            "start_pos": [
+                2000,
+                3000
+            ],
+            "start_angle": 90
         }
     }
 }

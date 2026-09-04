@@ -17,6 +17,7 @@ MAX_SIMULATIONS = 1000
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the NEAT Cars AI Simulation.")
+    parser.add_argument('--track', type=int, default=0, help="Track ID to load (0 = default)")
     parser.add_argument('--headless', action='store_true', help="Run the simulation without a GUI (faster).")
     parser.add_argument('--visual', action='store_false', dest='headless', help="Run the simulation with PyGame GUI.")
     # Default to headless if they don't specify, or default to visual.
@@ -25,7 +26,7 @@ def main() -> None:
     parser.set_defaults(headless=False)
     args = parser.parse_args()
 
-    engine = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS, headless=args.headless)
+    engine = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS, headless=args.headless, track_id=args.track)
     engine.run()
 
 

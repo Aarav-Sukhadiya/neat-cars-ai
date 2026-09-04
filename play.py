@@ -9,8 +9,6 @@ from src.render.camera import Camera
 from src.render.minimap import Minimap
 from src.render.colors import Color
 
-WIDTH = 1920
-HEIGHT = 1080
 SIDEBAR_WIDTH = 300
 
 class HumanCar(Car):
@@ -80,6 +78,9 @@ def main():
     args = parser.parse_args()
 
     pygame.init()
+    info = pygame.display.Info()
+    WIDTH = min(1920, int(info.current_w * 0.95))
+    HEIGHT = min(1080, int(info.current_h * 0.95))
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Neat Cars - Manual Driving Mode")
     clock = pygame.time.Clock()
@@ -167,18 +168,25 @@ def main():
         game_w = WIDTH - SIDEBAR_WIDTH
         game_h = HEIGHT
         
-        # Clamp zoom to prevent crashing subsurface
-        min_zoom = max(game_w / track_w, game_h / track_h, 0.1)
+        # Clamp zoom — don't let view exceed the actual track dimensions
+        min_zoom = max(0.05, game_w / track_w, game_h / track_h)
         zoom = max(min_zoom, zoom)
         
         view_w = game_w / zoom
         view_h = game_h / zoom
+
+        # Camera follows car, clamped so we never read outside the track surface
+        raw_cam_x = car.center[0] - view_w / 2
+        raw_cam_y = car.center[1] - view_h / 2
+        cam_x = max(0, min(raw_cam_x, track_w - view_w))
+        cam_y = max(0, min(raw_cam_y, track_h - view_h))
         
-        cam_x = max(0, min(car.center[0] - view_w / 2, track_w - view_w))
-        cam_y = max(0, min(car.center[1] - view_h / 2, track_h - view_h))
-        
-        # 1. Track Subsurface
-        sub_rect = pygame.Rect(int(cam_x), int(cam_y), int(view_w), int(view_h))
+        # 1. Track Subsurface — safe integer rect entirely within surface bounds
+        sx = int(cam_x)
+        sy = int(cam_y)
+        sw = min(int(view_w), track_w - sx)
+        sh = min(int(view_h), track_h - sy)
+        sub_rect = pygame.Rect(sx, sy, sw, sh)
         visible_track = track.surface.subsurface(sub_rect)
         scaled_track = pygame.transform.scale(visible_track, (game_w, game_h))
         screen.blit(scaled_track, (0, 0))

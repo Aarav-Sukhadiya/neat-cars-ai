@@ -59,8 +59,24 @@ class HumanCar(Car):
             self.check_sensor(sensor_angle, track)
 
 def main():
+    import json
+    import os
+    track_help = "Track ID to load (0 = default)"
+    try:
+        with open("config/track_config.json", "r") as f:
+            tconfig = json.load(f)
+        tracks_dict = tconfig.get("tracks", {})
+        track_keys = list(tracks_dict.keys())
+        help_parts = []
+        for i, key in enumerate(track_keys):
+            name = tracks_dict[key].get("name", key)
+            help_parts.append(f"{i}={name}")
+        track_help = "Track ID: " + ", ".join(help_parts)
+    except:
+        pass
+
     parser = argparse.ArgumentParser(description="Play Neat Cars manually using WASD!")
-    parser.add_argument('--track', type=int, default=0, help="Track ID to play (0=Massive, 1=Intersection, 2=Super Hard)")
+    parser.add_argument('--track', type=int, default=0, help=track_help)
     args = parser.parse_args()
 
     pygame.init()
@@ -201,7 +217,7 @@ def main():
         # HUD Text
         texts = [
             f"MANUAL DRIVING MODE",
-            f"Track: {args.track}",
+            f"Track: {track_data.get('name', args.track)}",
             "",
             f"Speed: {car.speed:.1f} px/f",
             f"Fitness: {car.get_reward():.1f}",

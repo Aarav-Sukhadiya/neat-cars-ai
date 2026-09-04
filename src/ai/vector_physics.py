@@ -159,4 +159,5 @@ class VectorizedPhysics:
             car.speed = float(self.speed[i])
             car.alive = self.alive[i]
             car.center = [float(self.cx[i]), float(self.cy[i])]
-            car.max_fitness_achieved = self.max_fitness[i]
+            car.max_fitness_achieved = float(self.max_fitness[i])
+            car.refresh_corners_positions()

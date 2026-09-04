@@ -192,6 +192,11 @@ class Engine:
         last_print_time = 0.0
 
         while True:
+            if car_ai.cars:
+                alive_cars = [c for c in car_ai.cars if c.alive]
+                best_car = max(alive_cars, key=lambda c: c.get_reward()) if alive_cars else car_ai.cars[0]
+                self.camera.update(best_car.center)
+                
             if not self.handle_events():
                 return
 
@@ -381,6 +386,11 @@ class Engine:
     # pragma: no cover
     def run(self):
         while True:
+            if car_ai.cars:
+                alive_cars = [c for c in car_ai.cars if c.alive]
+                best_car = max(alive_cars, key=lambda c: c.get_reward()) if alive_cars else car_ai.cars[0]
+                self.camera.update(best_car.center)
+                
             if not self.handle_events():
                 break
 

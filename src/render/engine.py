@@ -25,6 +25,16 @@ class Engine:
     DEFAULT_FONT = "comicsansms"
 
     def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False, track_id: int = 0, infinite: bool = False, target_survival: float = 0.0):
+        if not headless:
+            pygame.init()
+            infoObject = pygame.display.Info()
+            Engine.WIDTH = min(1920, int(infoObject.current_w * 0.95))
+            Engine.HEIGHT = min(1080, int(infoObject.current_h * 0.95))
+            Engine.SIDEBAR_WIDTH = min(400, int(Engine.WIDTH * 0.25))
+        else:
+            Engine.WIDTH = 1920
+            Engine.HEIGHT = 1080
+            Engine.SIDEBAR_WIDTH = 400
         self.neat_config_path = neat_config_path
         self.debug = debug
         self.max_simulations = max_simulations if not infinite else 999999999

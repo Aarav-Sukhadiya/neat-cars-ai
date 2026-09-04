@@ -7,7 +7,9 @@ import json
 import os
 
 pygame.init()
-SCREEN_W, SCREEN_H = 1280, 720
+infoObject = pygame.display.Info()
+SCREEN_W = min(1280, int(infoObject.current_w * 0.95))
+SCREEN_H = min(720, int(infoObject.current_h * 0.95))
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 pygame.display.set_caption("Track Editor - Draw Super Large Maps")
 font = pygame.font.SysFont("monospace", 16)

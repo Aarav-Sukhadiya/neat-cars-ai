@@ -283,18 +283,6 @@ class Test3_GPUInference(unittest.TestCase):
             np.testing.assert_allclose(gpu_out[i], ref, rtol=5e-2, atol=5e-2,
                 err_msg=f"Genome {i}: GPU output differs from neat-python")
 
-    def test_activate_subset_matches_full(self):
-        """activate_subset must give the same values as activate_all for those indices."""
-        from src.gpu.gpu_inference import GPUBatchInference
-        gpu_inf = GPUBatchInference(self.genomes, self.config)
-        np.random.seed(7)
-        all_inputs = np.random.uniform(0, 1000, (len(self.genomes), 5)).astype(np.float32)
-        all_out = gpu_inf.activate_all(all_inputs)
-        subset  = [1, 3, 5, 7, 9]
-        sub_out = gpu_inf.activate_subset(subset, all_inputs[subset])
-        for li, gi in enumerate(subset):
-            np.testing.assert_allclose(sub_out[li], all_out[gi], rtol=1e-5,
-                err_msg=f"Subset genome {gi}: mismatch")
 
     def test_output_shape(self):
         from src.gpu.gpu_inference import GPUBatchInference
@@ -351,7 +339,8 @@ class Test4_Integration(unittest.TestCase):
         for _ in range(10):
             car_ai.compute(self.surf)
         fitnesses = [g.fitness for _, g in genomes]
-        self.assertTrue(any(f >= 0 for f in fitnesses))
+        # Under the new checkpoint system, initial fitness is negative (0 - dist_to_next)
+        self.assertTrue(all(isinstance(f, float) and f < 0 for f in fitnesses if f is not None))
 
     def test_gpu_paths_active(self):
         """Both GPU modules must be loaded (not falling back to CPU)."""

@@ -20,146 +20,89 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class GPUBatchInference:
     """
     Runs NEAT FeedForward networks for a full population on the GPU in one
-    batched call.
-
-    NEAT genomes can each have a different topology (different hidden nodes /
-    connections). We handle this by grouping genomes by their topology hash
-    and running each group as a single batched matrix multiplication.
-    In practice, within a single generation topologies are nearly identical
-    (NEAT starts uniform and only gradually diverges), so almost all cars
-    get batched together.
+    massive dense matrix multiplication, completely eliminating topology divergence lag!
     """
 
     def __init__(self, genomes: List[Tuple[int, neat.DefaultGenome]], config: neat.Config,
                  prebuilt_nets=None):
         self.config = config
-        self._genome_layers: List[list] = []
-
-        if prebuilt_nets is not None:
-            nets = prebuilt_nets
-        else:
-            nets = [neat.nn.FeedForwardNetwork.create(g, config) for _, g in genomes]
-
-        for net in nets:
-            self._genome_layers.append(self._extract_layers(net))
-            
-        # ---- PRE-COMPILE AND CACHE PYTORCH MATRICES FOR ENTIRE GENERATION ----
-        self.compiled_groups = []
+        
         input_keys  = self.config.genome_config.input_keys
         output_keys = self.config.genome_config.output_keys
-        n_outputs   = len(output_keys)
         n_inputs    = len(input_keys)
+        n_outputs   = len(output_keys)
         
-        topology_map: Dict[str, List[int]] = {}
-        for global_i, layers in enumerate(self._genome_layers):
-            key = str([(nid, len(lnks)) for nid, _, _, lnks in layers])
-            topology_map.setdefault(key, []).append(global_i)
+        # 1. Find max node ID across ALL genomes
+        max_node_id = -1
+        for _, g in genomes:
+            if g.nodes:
+                m = max(g.nodes.keys())
+                if m > max_node_id:
+                    max_node_id = m
+                    
+        # Node mapping:
+        # Inputs: 0 to n_inputs-1
+        # Outputs and Hidden: n_inputs to n_inputs + max_node_id
+        self.n_total_nodes = n_inputs + max_node_id + 1
+        self.n_inputs = n_inputs
+        self.n_outputs = n_outputs
+        self.n_cars = len(genomes)
+        
+        def map_node(nid):
+            if nid < 0:
+                # neat-python input nodes are -1, -2, -3... 
+                # (-1 becomes 0, -2 becomes 1)
+                return abs(nid) - 1
+            return n_inputs + nid
             
-        for group_key, global_ids in topology_map.items():
-            n_group = len(global_ids)
-            template = self._genome_layers[global_ids[0]]
-            n_nodes  = len(template)
-            
-            if n_nodes == 0:
-                self.compiled_groups.append({'global_ids': global_ids, 'n_nodes': 0})
-                continue
+        W = np.zeros((self.n_cars, self.n_total_nodes, self.n_total_nodes), dtype=np.float32)
+        B = np.zeros((self.n_cars, self.n_total_nodes), dtype=np.float32)
+        R = np.ones((self.n_cars, self.n_total_nodes), dtype=np.float32)
+        
+        self.max_depth = 1
+        
+        for i, (_, g) in enumerate(genomes):
+            hidden_count = 0
+            for nid, node in g.nodes.items():
+                mapped_n = map_node(nid)
+                B[i, mapped_n] = node.bias
+                R[i, mapped_n] = node.response
+                if nid not in output_keys:
+                    hidden_count += 1
+                    
+            if hidden_count + 1 > self.max_depth:
+                self.max_depth = hidden_count + 1
                 
-            max_inputs_per_node = max(len(lnks) for _, _, _, lnks in template) if template else 0
-
-            weights   = np.zeros((n_group, n_nodes, max(max_inputs_per_node, 1)), dtype=np.float32)
-            biases    = np.zeros((n_group, n_nodes), dtype=np.float32)
-            responses = np.zeros((n_group, n_nodes), dtype=np.float32)
-
-            key_to_col: Dict[int, int] = {}
-            for ci, k in enumerate(input_keys):
-                key_to_col[k] = ci
-            for ni, (nid, _, _, _) in enumerate(template):
-                key_to_col[nid] = n_inputs + ni
-
-            inp_keys_per_node = [
-                [inp_nid for inp_nid, _ in lnks]
-                for _, _, _, lnks in template
-            ]
-            
-            for gi_local, global_i in enumerate(global_ids):
-                layers = self._genome_layers[global_i]
-                for ni, (_, bias, response, lnks) in enumerate(layers):
-                    biases[gi_local, ni]    = bias
-                    responses[gi_local, ni] = response
-                    for li_link, (_, w) in enumerate(lnks):
-                        weights[gi_local, ni, li_link] = w
-
-            out_cols = [key_to_col[k] for k in output_keys]
-            
-            inp_cols_per_node = []
-            for inp_nids in inp_keys_per_node:
-                inp_cols_per_node.append([key_to_col[k] for k in inp_nids])
-            
-            # CACHE EVERYTHING IN GPU VRAM
-            self.compiled_groups.append({
-                'global_ids': global_ids,
-                'n_nodes': n_nodes,
-                'W': torch.tensor(weights, device=DEVICE),
-                'B': torch.tensor(biases, device=DEVICE),
-                'R': torch.tensor(responses, device=DEVICE),
-                'inp_cols_per_node': inp_cols_per_node,
-                'out_cols': out_cols,
-                'n_inputs': n_inputs
-            })
-
-    def _extract_layers(self, net: neat.nn.FeedForwardNetwork) -> list:
-        return [
-            (node_id, bias, response, links)
-            for node_id, _act, _agg, bias, response, links in net.node_evals
-        ]
-
+            for cg in g.connections.values():
+                if cg.enabled:
+                    n_in = map_node(cg.key[0])
+                    n_out = map_node(cg.key[1])
+                    W[i, n_out, n_in] = cg.weight
+                    
+        # Output columns
+        self.out_cols = [map_node(k) for k in output_keys]
+        
+        # Move to GPU
+        self.W = torch.tensor(W, device=DEVICE)
+        self.B = torch.tensor(B, device=DEVICE)
+        self.R = torch.tensor(R, device=DEVICE)
+        
     def activate_all(self, inputs_array: np.ndarray) -> np.ndarray:
         """
-        Run the full population's neural networks in parallel on GPU.
-        Args:
-            inputs_array: (n_cars, n_inputs) float32 numpy array.
-        Returns:
-            outputs_array: (n_cars, n_outputs) float32 numpy array.
+        Evaluates ALL networks in exactly self.max_depth tensor operations.
         """
-        n_cars = inputs_array.shape[0]
-        n_outputs = len(self.config.genome_config.output_keys)
+        X = torch.zeros((self.n_cars, self.n_total_nodes), device=DEVICE)
+        X[:, :self.n_inputs] = torch.tensor(inputs_array, device=DEVICE)
         
-        inputs_tensor = torch.tensor(inputs_array, device=DEVICE)
-        outputs_tensor = torch.zeros((n_cars, n_outputs), device=DEVICE)
-        
-        for group in self.compiled_groups:
-            global_ids = group['global_ids']
-            n_nodes = group['n_nodes']
-            if n_nodes == 0:
-                continue
-                
-            n_group = len(global_ids)
-            n_inputs = group['n_inputs']
+        # Dense Jacobi iteration to simulate feedforward topological propagation
+        for _ in range(self.max_depth):
+            # X_new = tanh((W * X + B) * R)
+            # W is (cars, nodes, nodes), X is (cars, nodes, 1)
+            agg = torch.bmm(self.W, X.unsqueeze(2)).squeeze(2)
+            X_new = torch.tanh((agg + self.B) * self.R)
             
-            group_inputs = inputs_tensor[global_ids]
+            # Keep inputs untouched
+            X_new[:, :self.n_inputs] = X[:, :self.n_inputs]
+            X = X_new
             
-            n_value_cols = n_inputs + n_nodes
-            values = torch.zeros((n_group, n_value_cols), device=DEVICE)
-            values[:, :n_inputs] = group_inputs
-            
-            W = group['W']
-            B = group['B']
-            R = group['R']
-            inp_cols_per_node = group['inp_cols_per_node']
-            
-            # PURE PyTorch evaluation (NO python list building)
-            for ni in range(n_nodes):
-                inp_cols = inp_cols_per_node[ni]
-                if not inp_cols:
-                    node_out = torch.tanh(B[:, ni] * R[:, ni])
-                else:
-                    inp_vals = values[:, inp_cols]
-                    w_slice  = W[:, ni, :len(inp_cols)]
-                    agg      = (inp_vals * w_slice).sum(dim=1)
-                    node_out = torch.tanh((agg + B[:, ni]) * R[:, ni])
-                    
-                values[:, n_inputs + ni] = node_out
-                
-            outputs_tensor[global_ids] = values[:, group['out_cols']]
-            
-        return outputs_tensor.cpu().numpy()
+        return X[:, self.out_cols].cpu().numpy()

@@ -35,13 +35,13 @@
             "start_angle": 0
         },
         "custom": {
-            "name": "Custom Editor Map",
-            "image": "assets/tracks/custom.png",
-            "checkpoints": "data/tracks/custom.json",
+            "name": "NoLoopNoObstacle",
+            "image": "assets/tracks/no_loop.png",
+            "checkpoints": "data/tracks/no_loop.json",
             "max_frames": 7200,
             "start_pos": [
-                200,
-                200
+                100,
+                400
             ],
             "start_angle": 0
         }

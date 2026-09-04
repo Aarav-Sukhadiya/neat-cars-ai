@@ -20,24 +20,24 @@ class HumanCar(Car):
 
     def handle_input(self, keys):
         if keys[pygame.K_w]:
-            self.speed += 0.5
+            self.speed += 0.15
         elif keys[pygame.K_s]:
-            self.speed -= 1.0  # Stronger brakes
+            self.speed -= 0.6  # Stronger brakes
         else:
             # Friction
             if self.speed > 0:
-                self.speed -= 0.25
+                self.speed -= 0.15
             elif self.speed < 0:
-                self.speed += 0.25
+                self.speed += 0.15
             if abs(self.speed) < 0.3:
                 self.speed = 0
 
         # Cap speed
-        self.speed = max(-10.0, min(self.speed, 25.0))
+        self.speed = max(-8.0, min(self.speed, 18.0))
 
         # Steering feels better when it's crisp, and flips in reverse
         if abs(self.speed) > 0.5:
-            turn_speed = 6.0
+            turn_speed = 3.5
             steer_dir = 1 if self.speed > 0 else -1
             if keys[pygame.K_a]:
                 self.angle += turn_speed * steer_dir

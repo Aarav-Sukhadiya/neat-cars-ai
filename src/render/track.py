@@ -1,6 +1,6 @@
 import pygame
 from typing import Tuple
-from render.colors import Color
+from src.render.colors import Color
 
 
 class Track:

@@ -5,11 +5,11 @@ import numpy as np
 import pickle
 import copy
 from typing import Tuple, List
-from ai.car_ai import CarAI
-from render.car import Car
-from render.colors import Color
-from render.track import Track
-from render.stats_panel import StatsPanel
+from src.ai.car_ai import CarAI
+from src.render.car import Car
+from src.render.colors import Color
+from src.render.track import Track
+from src.render.stats_panel import StatsPanel
 
 class Engine:
     WIDTH = 1900
@@ -67,7 +67,7 @@ class Engine:
         # Load Hall of Fame
         self.hall_of_fame = []
         try:
-            with open("hall_of_fame.pkl", "rb") as f:
+            with open("data/hall_of_fame.pkl", "rb") as f:
                 self.hall_of_fame = pickle.load(f)
             print(f"Loaded {len(self.hall_of_fame)} elite cars from Hall of Fame!")
         except (FileNotFoundError, EOFError):
@@ -143,14 +143,14 @@ class Engine:
         try:
             winner = self.population.run(self.run_simulation, self.max_simulations)
             
-            with open("best_car_brain.pkl", "wb") as f:
+            with open("data/best_car_brain.pkl", "wb") as f:
                 pickle.dump(winner, f)
             print(f"\nSaved best genome to 'best_car_brain.pkl'!")
         except StagnationTermination:
             print("\n[!] Training terminated: All records have stagnated for more than 25 generations.")
             if self.hall_of_fame:
                 winner = self.hall_of_fame[0][1]
-                with open("best_car_brain.pkl", "wb") as f:
+                with open("data/best_car_brain.pkl", "wb") as f:
                     pickle.dump(winner, f)
                 print(f"Saved all-time best genome to 'best_car_brain.pkl'!")
             if self.HEADLESS:
@@ -332,7 +332,7 @@ class Engine:
         self.hall_of_fame = list(unique_hof.values())
         
         try:
-            with open("hall_of_fame.pkl", "wb") as f:
+            with open("data/hall_of_fame.pkl", "wb") as f:
                 pickle.dump(self.hall_of_fame, f)
         except Exception as e:
             pass

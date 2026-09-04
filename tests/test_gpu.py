@@ -207,7 +207,7 @@ class Test2_GPURaycast(unittest.TestCase):
 
     def test_gpu_vs_cpu_distances(self):
         """GPU sensor distances must match the original pixel-walker within ±2 pixels."""
-        from gpu.gpu_raycast import GPURaycast
+        from src.gpu.gpu_raycast import GPURaycast
         raycast = GPURaycast(self.track_w, self.track_h)
         gpu_dist, gpu_hx, gpu_hy = raycast.compute(
             self.wall_pixels, self.cx, self.cy, self.angles
@@ -229,7 +229,7 @@ class Test2_GPURaycast(unittest.TestCase):
 
     def test_multiple_cars_consistency(self):
         """All identical cars must produce identical sensor readings."""
-        from gpu.gpu_raycast import GPURaycast
+        from src.gpu.gpu_raycast import GPURaycast
         N = 50
         cx     = np.full(N, 200.0, dtype=np.float32)
         cy     = np.full(N, 150.0, dtype=np.float32)
@@ -243,7 +243,7 @@ class Test2_GPURaycast(unittest.TestCase):
 
     def test_output_shapes(self):
         """Output tensors must have shape (N, 5) for N cars."""
-        from gpu.gpu_raycast import GPURaycast
+        from src.gpu.gpu_raycast import GPURaycast
         N = 7
         raycast = GPURaycast(self.track_w, self.track_h)
         cx     = np.random.uniform(50, 350, N).astype(np.float32)
@@ -269,7 +269,7 @@ class Test3_GPUInference(unittest.TestCase):
     def test_output_matches_neat_python(self):
         """GPU outputs must match neat-python FeedForwardNetwork within float32 precision."""
         import neat
-        from gpu.gpu_inference import GPUBatchInference
+        from src.gpu.gpu_inference import GPUBatchInference
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         nets = [neat.nn.FeedForwardNetwork.create(g, self.config) for _, g in self.genomes]
         np.random.seed(42)
@@ -285,7 +285,7 @@ class Test3_GPUInference(unittest.TestCase):
 
     def test_activate_subset_matches_full(self):
         """activate_subset must give the same values as activate_all for those indices."""
-        from gpu.gpu_inference import GPUBatchInference
+        from src.gpu.gpu_inference import GPUBatchInference
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         np.random.seed(7)
         all_inputs = np.random.uniform(0, 1000, (len(self.genomes), 5)).astype(np.float32)
@@ -297,7 +297,7 @@ class Test3_GPUInference(unittest.TestCase):
                 err_msg=f"Subset genome {gi}: mismatch")
 
     def test_output_shape(self):
-        from gpu.gpu_inference import GPUBatchInference
+        from src.gpu.gpu_inference import GPUBatchInference
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         out = gpu_inf.activate_all(np.ones((len(self.genomes), 5), dtype=np.float32))
         self.assertEqual(out.shape, (len(self.genomes), 4))
@@ -305,7 +305,7 @@ class Test3_GPUInference(unittest.TestCase):
     def test_argmax_choice_matches(self):
         """The chosen action (argmax) must be identical between GPU and CPU."""
         import neat
-        from gpu.gpu_inference import GPUBatchInference
+        from src.gpu.gpu_inference import GPUBatchInference
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         nets    = [neat.nn.FeedForwardNetwork.create(g, self.config) for _, g in self.genomes]
         np.random.seed(99)
@@ -330,8 +330,8 @@ class Test4_Integration(unittest.TestCase):
 
     def test_carai_one_step(self):
         """CarAI.compute() must run without errors using the GPU pipeline."""
-        from render.track import Track
-        from ai.car_ai import CarAI
+        from src.render.track import Track
+        from src.ai.car_ai import CarAI
         config  = _make_neat_config()
         genomes = _make_population(config, n=10)
         track   = Track(400, 300)
@@ -342,8 +342,8 @@ class Test4_Integration(unittest.TestCase):
 
     def test_fitness_accumulates(self):
         """After 10 steps at least one car should have non-zero fitness."""
-        from render.track import Track
-        from ai.car_ai import CarAI
+        from src.render.track import Track
+        from src.ai.car_ai import CarAI
         config  = _make_neat_config()
         genomes = _make_population(config, n=5)
         track   = Track(400, 300)
@@ -355,8 +355,8 @@ class Test4_Integration(unittest.TestCase):
 
     def test_gpu_paths_active(self):
         """Both GPU modules must be loaded (not falling back to CPU)."""
-        from render.track import Track
-        from ai.car_ai import CarAI
+        from src.render.track import Track
+        from src.ai.car_ai import CarAI
         config  = _make_neat_config()
         genomes = _make_population(config, n=2)
         track   = Track(400, 300)
@@ -388,7 +388,7 @@ class Test5_Performance(unittest.TestCase):
         small flat NEAT networks (5→4 nodes) have minimal CPU overhead per call.
         The GPU advantage compounds at scale with hidden layers & many cars."""
         import neat
-        from gpu.gpu_inference import GPUBatchInference
+        from src.gpu.gpu_inference import GPUBatchInference
 
         inputs  = np.random.uniform(0, 1000, (self.N_CARS, 5)).astype(np.float32)
         gpu_inf = GPUBatchInference(self.genomes, self.config)

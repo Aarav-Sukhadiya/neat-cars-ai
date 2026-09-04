@@ -3,8 +3,8 @@
 
 import neat
 import pygame
-from render.neural_network.node import Node, Connection, NodeType
-from render.colors import Color
+from src.render.neural_network.node import Node, Connection, NodeType
+from src.render.colors import Color
 
 
 # ------------------ CLASSES ------------------

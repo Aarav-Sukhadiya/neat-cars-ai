@@ -2,7 +2,7 @@
 
 
 import pygame
-from render.colors import Color
+from src.render.colors import Color
 
 # ------------------ GLOBAL VARIABLES ------------------
 

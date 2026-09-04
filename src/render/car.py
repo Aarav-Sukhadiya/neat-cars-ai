@@ -3,8 +3,8 @@
 
 import pygame
 import math
-from render.colors import Color
-from render.track import Track
+from src.render.colors import Color
+from src.render.track import Track
 
 
 # ------------------ GLOBAL VARIABLES  ------------------

@@ -20,7 +20,7 @@ def main():
     
     # Load existing if available
     try:
-        with open('checkpoints.json', 'r') as f:
+        with open('data/checkpoints.json', 'r') as f:
             checkpoints = json.load(f)
     except FileNotFoundError:
         pass
@@ -63,7 +63,7 @@ def main():
                         checkpoints.pop()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
-                    with open('checkpoints.json', 'w') as f:
+                    with open('data/checkpoints.json', 'w') as f:
                         json.dump(checkpoints, f, indent=4)
                     print(f"Saved {len(checkpoints)} checkpoints to checkpoints.json!")
                     running = False

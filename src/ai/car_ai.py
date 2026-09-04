@@ -4,19 +4,19 @@
 import neat
 import pygame
 import numpy as np
-from render.car import Car, Action
-from render.neural_network.nn import NN
-from render.track import Track
+from src.render.car import Car, Action
+from src.render.neural_network.nn import NN
+from src.render.track import Track
 
 # GPU acceleration modules (gracefully degrade if unavailable)
 try:
-    from gpu.gpu_inference import GPUBatchInference, DEVICE
+    from src.gpu.gpu_inference import GPUBatchInference, DEVICE
     _GPU_INFERENCE = True
 except ImportError:
     _GPU_INFERENCE = False
 
 try:
-    from gpu.gpu_raycast import GPURaycast
+    from src.gpu.gpu_raycast import GPURaycast
     _GPU_RAYCAST = True
 except ImportError:
     _GPU_RAYCAST = False
@@ -52,8 +52,8 @@ class CarAI:
         import os
         import json
         self.checkpoints = []
-        if os.path.exists('checkpoints.json'):
-            with open('checkpoints.json', 'r') as f:
+        if os.path.exists('data/checkpoints.json'):
+            with open('data/checkpoints.json', 'r') as f:
                 self.checkpoints = json.load(f)
 
         for _, genome in genomes:

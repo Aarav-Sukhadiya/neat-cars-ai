@@ -4,7 +4,7 @@ Stats panel renderer — draws the 400x1080 HUD sidebar on the right.
 
 import pygame
 import math
-from render.colors import Color
+from src.render.colors import Color
 
 _BG          = (15,  15,  20)
 _BORDER      = (50,  50,  60)

@@ -17,8 +17,26 @@ class Minimap:
         self.track_preview = None
         
     def set_track_surface(self, track_surface: pygame.Surface) -> None:
-        """Cache a scaled down version of the track."""
-        self.track_preview = pygame.transform.smoothscale(track_surface, (self.width, self.height))
+        """Cache a scaled down version of the track and stylize it."""
+        raw_preview = pygame.transform.smoothscale(track_surface, (self.width, self.height))
+        
+        styled = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        styled.fill((40, 40, 40, 200)) # Dark grey surroundings with some transparency
+        
+        # Extract black road mask
+        road_mask = pygame.mask.from_threshold(raw_preview, (0, 0, 0, 255), (128, 128, 128, 255))
+        
+        outline_surf = road_mask.to_surface(setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 0))
+        road_surf = road_mask.to_surface(setcolor=(10, 10, 10, 255), unsetcolor=(0, 0, 0, 0))
+        
+        # Outline by blitting shifted
+        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]:
+            styled.blit(outline_surf, (dx, dy))
+            
+        # Draw road on top
+        styled.blit(road_surf, (0, 0))
+        
+        self.track_preview = styled
         
     def world_to_minimap(self, pos: tuple[float, float]) -> tuple[int, int]:
         """Convert a world position to a minimap position."""

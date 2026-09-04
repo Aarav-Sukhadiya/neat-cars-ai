@@ -24,11 +24,12 @@ class Engine:
     FPS = 60
     DEFAULT_FONT = "comicsansms"
 
-    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False, track_id: int = 0):
+    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False, track_id: int = 0, infinite: bool = False):
         self.neat_config_path = neat_config_path
         self.debug = debug
-        self.max_simulations = max_simulations
+        self.max_simulations = max_simulations if not infinite else 999999999
         self.HEADLESS = headless
+        self.infinite = infinite
         self.title = "Neat Cars"
         
         self.all_time_best_fitness = (0.0, 0)
@@ -433,7 +434,7 @@ class Engine:
         gen_diff_median = car_ai.TOTAL_GENERATIONS - self.all_time_best_median[1]
         gen_diff_survival = car_ai.TOTAL_GENERATIONS - self.all_time_survival_rate[1]
         
-        if gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_survival > 25:
+        if not self.infinite and gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_survival > 25:
             if hasattr(self, 'StagnationTermination'):
                 raise self.StagnationTermination()
                 

@@ -10,8 +10,7 @@ from src.render.track import Track
 # ------------------ GLOBAL VARIABLES  ------------------
 
 
-CAR_SPRITE_PATH = "assets/car.png"
-DEAD_CAR_SPRITE_PATH = "assets/dead_car.png"
+
 
 
 # ------------------ CLASSES ------------------
@@ -42,23 +41,6 @@ class Car:
 
     # Class-level sprite cache: loaded once, shared across all cars every generation.
     # This eliminates ~490ms of pygame.image.load + convert_alpha per generation start.
-    _shared_sprite: pygame.Surface = None
-    _shared_dead_sprite: pygame.Surface = None
-
-    @classmethod
-    def _get_shared_sprite(cls) -> pygame.Surface:
-        if cls._shared_sprite is None:
-            s = pygame.image.load(CAR_SPRITE_PATH)
-            cls._shared_sprite = pygame.transform.scale(s, (cls.CAR_SIZE_X, cls.CAR_SIZE_Y))
-        return cls._shared_sprite
-
-    @classmethod
-    def _get_shared_dead_sprite(cls) -> pygame.Surface:
-        if cls._shared_dead_sprite is None:
-            s = pygame.image.load(DEAD_CAR_SPRITE_PATH)
-            cls._shared_dead_sprite = pygame.transform.scale(s, (cls.CAR_SIZE_X, cls.CAR_SIZE_Y))
-        return cls._shared_dead_sprite
-
     def __init__(self, start_position: list, track: Track, checkpoints: list = None):
         self.checkpoints = checkpoints or []
         self.current_checkpoint_index = 0
@@ -66,13 +48,6 @@ class Car:
         self.checkpoint_fitness = 0.0
         self.max_fitness_achieved = -float('inf')
         self.old_position = start_position.copy()
-        # Use shared class-level sprite (loaded once, never per-car per-generation)
-        self._sprite = self._get_shared_sprite()
-
-        # Assigning the current sprite to this variable sprite (the one which will be rotated)
-        # we need this to avoid out of memory errors from pygame
-        self.sprite = self._sprite
-
         self.position = start_position.copy()
 
         self.angle = Car.DEFAULT_ANGLE
@@ -212,20 +187,8 @@ class Car:
         min_sensor_distance = min(sensor[1] for sensor in self.sensors) if self.sensors else self.CAR_SIZE_X
         self.minimum_speed = max(self.CAR_SIZE_X / 6, min_sensor_distance / 20)
 
-    _ROTATED_SPRITES_CACHE = {}
-
     def update_center(self) -> None:
-        """Update the center of the car after a rotation (when it turns left or right)"""
-        
-        # Pull from cache instead of rotating dynamically every frame
-        if self.angle not in Car._ROTATED_SPRITES_CACHE:
-            sprite_as_rect = self._sprite.get_rect()
-            rotated_sprite = pygame.transform.rotate(self._sprite, self.angle)
-            sprite_as_rect.center = rotated_sprite.get_rect().center
-            Car._ROTATED_SPRITES_CACHE[self.angle] = rotated_sprite.subsurface(sprite_as_rect)
-            
-        self.sprite = Car._ROTATED_SPRITES_CACHE[self.angle]
-        # Calculate New Center
+        """Update the center of the car using its top-left position"""
         self.center = [
             int(self.position[0]) + Car.CAR_SIZE_X / 2,
             int(self.position[1]) + Car.CAR_SIZE_Y / 2

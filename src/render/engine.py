@@ -34,6 +34,7 @@ class Engine:
         self.all_time_best_fitness = (0.0, 0)
         self.all_time_best_median = (0.0, 0)
         self.all_time_survival_rate = (0.0, 0)
+        self.all_time_top_speed = (0.0, 0)
         self.prev_gen_stats = None
         
         # Load Track Configuration
@@ -288,6 +289,7 @@ class Engine:
                     print(f" Highest Fitness      : {self.all_time_best_fitness[0]:,.1f} (Gen {self.all_time_best_fitness[1]})")
                     print(f" Highest Median Score : {self.all_time_best_median[0]:,.1f} (Gen {self.all_time_best_median[1]})")
                     print(f" Highest Survival Rate: {self.all_time_survival_rate[0]:.1f} % (Gen {self.all_time_survival_rate[1]})")
+                    print(f" Highest Top Speed    : {self.all_time_top_speed[0]:.1f} px/s (Gen {self.all_time_top_speed[1]})")
                     print("==================================================")
             else:
                 self.screen.fill((15, 15, 20))
@@ -374,6 +376,8 @@ class Engine:
                 self.all_time_best_fitness = (best_survivor_fit, car_ai.TOTAL_GENERATIONS)
             if survival_rate > self.all_time_survival_rate[0]:
                 self.all_time_survival_rate = (survival_rate, car_ai.TOTAL_GENERATIONS)
+            if best_survivor_speed > self.all_time_top_speed[0]:
+                self.all_time_top_speed = (best_survivor_speed, car_ai.TOTAL_GENERATIONS)
 
         # Save final generation stats to display next round
         # As requested, only show the best fitness and top speed of ALIVE cars from that generation.

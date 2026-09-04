@@ -69,33 +69,40 @@ def main():
     clock = pygame.time.Clock()
 
     # Track Configuration
-    if args.track == 0:
-        track_img_path = "assets/tracks/massive_loop.png"
-        track_w, track_h = 4000, 3000
-        start_pos = [200, 950]
-        checkpoints_path = "data/tracks/massive_loop.json"
-    elif args.track == 1:
-        track_img_path = "assets/tracks/intersection_loop.png"
-        track_w, track_h = 4000, 4000
-        start_pos = [2000, 2900]
-        checkpoints_path = "data/tracks/intersection_loop.json"
-    elif args.track == 2:
-        track_img_path = "assets/tracks/super_hard.png"
-        track_w, track_h = 4000, 4000
-        start_pos = [500, 3500]
-        checkpoints_path = "data/tracks/super_hard.json"
-    else:
-        print("Invalid track ID. Choose 0, 1, or 2.")
-        sys.exit(1)
 
+    import json
+    
+    # Load track config dynamically
+    with open("config/track_config.json", "r") as f:
+        tconfig = json.load(f)
+        
+    tracks_dict = tconfig.get("tracks", {})
+    track_keys = list(tracks_dict.keys())
+    
+    if 0 <= args.track < len(track_keys):
+        track_key = track_keys[args.track]
+        track_data = tracks_dict[track_key]
+        
+        track_img_path = track_data["image"]
+        start_pos = track_data.get("start_pos", [200, 200])
+        checkpoints_path = track_data.get("checkpoints", None)
+        
+        # We need to find the width/height of the track image. Pygame will do this when loaded.
+        track_w, track_h = 4000, 4000  # Defaults, will be overridden by the actual image
+        
+    else:
+        print(f"Invalid track ID. Choose between 0 and {len(track_keys) - 1}.")
+        sys.exit(1)
     # Initialize components
-    track = Track(track_w, track_h)
     try:
         track_img = pygame.image.load(track_img_path).convert()
-        track.surface.blit(track_img, (0, 0))
+        track_w, track_h = track_img.get_width(), track_img.get_height()
     except Exception as e:
         print(f"Error loading track image: {e}")
         sys.exit(1)
+        
+    track = Track(track_w, track_h)
+    track.surface.blit(track_img, (0, 0))
 
     camera = Camera(WIDTH - SIDEBAR_WIDTH, HEIGHT, track_w, track_h)
     minimap = Minimap(SIDEBAR_WIDTH - 40, (SIDEBAR_WIDTH - 40) * (track_h / track_w), track_w, track_h)

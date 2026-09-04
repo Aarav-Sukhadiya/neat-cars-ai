@@ -50,16 +50,18 @@ class Engine:
         self.track = Track(self.TRACK_WIDTH, self.TRACK_HEIGHT)
         self.camera = Camera(self.WIDTH - self.SIDEBAR_WIDTH, self.HEIGHT, self.TRACK_WIDTH, self.TRACK_HEIGHT)
         self.minimap = Minimap(self.SIDEBAR_WIDTH - 40, (self.SIDEBAR_WIDTH - 40) * (self.TRACK_HEIGHT / self.TRACK_WIDTH), self.TRACK_WIDTH, self.TRACK_HEIGHT)
-        # Give minimap a scaled track preview
-        # Need to generate track surface first if not loaded from image, but wait, track generates on first draw
-        # Actually in engine track is an empty Surface until create_map fills it, but let's just use track.surface
-        self.minimap.set_track_surface(self.track.surface)
         try:
             # Drop .convert() so it works without a display context
             track_img = pygame.image.load("assets/track.png")
             self.track.surface.blit(track_img, (0, 0))
         except Exception as e:
             print(f"Warning: Could not load track.png: {e}")
+            
+        # Give minimap a scaled track preview NOW that the track is loaded
+        self.minimap.set_track_surface(self.track.surface)
+        
+        # Initialize checkpoint font
+        self.checkpoint_font = pygame.font.SysFont(None, 24)
 
         self.car = Car([0, 0], self.track)
         
@@ -280,6 +282,13 @@ class Engine:
                         # Draw in a faint orange/yellow so it's visible but not distracting
                         color = (255, 165, 0) if i > 0 else (0, 255, 0) # Start line is green
                         pygame.draw.line(self.screen, color, shifted_p1, shifted_p2, 2)
+                        
+                        # Draw the checkpoint number
+                        if hasattr(self, 'checkpoint_font'):
+                            font_surf = self.checkpoint_font.render(str(i), True, (255, 255, 255))
+                            mid_x = (shifted_p1[0] + shifted_p2[0]) / 2
+                            mid_y = (shifted_p1[1] + shifted_p2[1]) / 2
+                            self.screen.blit(font_surf, (mid_x, mid_y))
                         
                 for car in car_ai.cars:
                     if car.alive:

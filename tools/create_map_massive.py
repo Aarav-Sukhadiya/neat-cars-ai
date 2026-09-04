@@ -10,34 +10,25 @@ surf.fill((255, 255, 255)) # White is wall
 
 # Let's build a huge track! Start at 200, 950
 points = [
-    (200, 950),     # START
-    (400, 950),     # Long straight acceleration
-    (1800, 950),    # Super long straight
-    (2200, 850),    # Smooth right turn
-    (2200, 400),    # Upwards straight
-    (1800, 200),    # Left hairpin entry
-    (1600, 400),    # Left hairpin exit
-    (1600, 1000),   # Downwards straight
-    (1400, 1300),   # Chicane right
-    (1200, 1200),   # Chicane left
-    (1000, 1500),   # Drop down
-    (1200, 2000),   # Deep south loop
-    (2000, 2400),   # Wide sweeper
-    (3000, 2400),   # Long bottom straight
-    (3500, 2200),   # Hard up turn
-    (3600, 1000),   # Massive upward sprint (high speed!)
-    (3400, 500),    # Hook left
-    (2800, 300),    # Hook left again
-    (2400, 500),    # Snaking S curve start
-    (2600, 800),    
-    (2400, 1100),
-    (2600, 1400),
-    (2400, 1700),   # S curve end
-    (1800, 1700),   # Cut across
-    (1000, 2200),
-    (500, 2500),    # Far left hook
-    (200, 2000),    # Go up
-    (300, 1500),
+    (200, 950),     # START (faces right)
+    (600, 950),     # Short straight
+    (1000, 800),    # Curve up-right
+    (1000, 400),    # Up
+    (1400, 200),    # Curve right
+    (2200, 200),    # Top straight
+    (2600, 600),    # Curve down-right
+    (2800, 1200),   # Down
+    (2400, 1600),   # S-curve left
+    (2600, 2000),   # S-curve right
+    (2400, 2400),   # S-curve left
+    (2800, 2800),   # Curve right-down
+    (3200, 3200),   # Bottom right corner
+    (2000, 3400),   # Bottom straight
+    (1000, 3400),   # Bottom straight
+    (400, 3000),    # Curve up-left
+    (200, 2000),    # Left straight up
+    (400, 1400),    # Chicane right
+    (200, 1200),    # Chicane left
     (200, 950)      # Back to start
 ]
 
@@ -82,12 +73,10 @@ for i in range(len(smooth_points)-1):
 
 # ADD OBSTACLES (White circles / polygons on the black track)
 obstacles = [
-    (1000, 950, 20),   # First straight minor bump
-    (1600, 950, 30),   # Another block
-    (1400, 1250, 25),  # In the chicane
-    (3200, 2400, 40),  # Big block on bottom straight
-    (3600, 1600, 30),  # Right side sprint block
-    (2500, 1100, 25),  # Middle of S-curve
+    (1800, 200, 25),   # Top straight block
+    (2500, 1800, 30),  # Middle of S-curves
+    (2000, 3400, 40),  # Bottom straight block
+    (300, 1700, 20),   # Left straight block
 ]
 for obs_x, obs_y, obs_r in obstacles:
     pygame.draw.circle(surf, (255, 255, 255), (obs_x, obs_y), obs_r)

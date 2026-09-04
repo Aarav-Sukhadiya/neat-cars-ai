@@ -1,0 +1,12 @@
+{
+    "current_track": "massive_loop",
+    "tracks": {
+        "massive_loop": {
+            "name": "Massive Loop",
+            "image": "assets/tracks/massive_loop.png",
+            "checkpoints": "data/tracks/massive_loop.json",
+            "max_frames": 3600,
+            "start_pos": [200, 950]
+        }
+    }
+}

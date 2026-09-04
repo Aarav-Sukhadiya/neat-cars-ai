@@ -1,6 +1,8 @@
 import pygame
 import neat
 import time
+import json
+import os
 import numpy as np
 import pickle
 import copy
@@ -34,6 +36,28 @@ class Engine:
         self.all_time_survival_rate = (0.0, 0)
         self.prev_gen_stats = None
         
+        # Load Track Configuration
+        self.track_image_path = "assets/track.png"
+        self.checkpoints_path = "data/checkpoints.json"
+        self.decided_car_pos = [200 - Car.CAR_SIZE_X / 2, 950 - Car.CAR_SIZE_Y / 2]
+        
+        if os.path.exists("config/track_config.json"):
+            with open("config/track_config.json", "r") as f:
+                tconfig = json.load(f)
+                curr = tconfig.get("current_track", "")
+                if curr in tconfig.get("tracks", {}):
+                    track_data = tconfig["tracks"][curr]
+                    self.track_image_path = track_data.get("image", self.track_image_path)
+                    self.checkpoints_path = track_data.get("checkpoints", self.checkpoints_path)
+                    if "start_pos" in track_data:
+                        # Center the car on the starting coordinate
+                        self.decided_car_pos = [
+                            track_data["start_pos"][0] - Car.CAR_SIZE_X / 2, 
+                            track_data["start_pos"][1] - Car.CAR_SIZE_Y / 2
+                        ]
+                    if "max_frames" in track_data:
+                        CarAI.MAX_FRAMES = track_data["max_frames"]
+        
         # In headless mode we do not initialize a display window!
         if not self.HEADLESS:
             pygame.init()
@@ -52,7 +76,7 @@ class Engine:
         self.minimap = Minimap(self.SIDEBAR_WIDTH - 40, (self.SIDEBAR_WIDTH - 40) * (self.TRACK_HEIGHT / self.TRACK_WIDTH), self.TRACK_WIDTH, self.TRACK_HEIGHT)
         try:
             # Drop .convert() so it works without a display context
-            track_img = pygame.image.load("assets/track.png")
+            track_img = pygame.image.load(self.track_image_path)
             self.track.surface.blit(track_img, (0, 0))
         except Exception as e:
             print(f"Warning: Could not load track.png: {e}")
@@ -69,7 +93,6 @@ class Engine:
         self.stats_panel = None if self.HEADLESS else StatsPanel(self.SIDEBAR_WIDTH, self.HEIGHT)
         
         self.state = "ai_running"
-        self.decided_car_pos = [200 - Car.CAR_SIZE_X / 2, 950 - Car.CAR_SIZE_Y / 2]
         self.instructions = ["Training in progress..."]
         self.instruction_index = 0
         
@@ -181,7 +204,7 @@ class Engine:
             self.population.species.speciate(config, self.population.population, self.population.generation)
             genomes = list(self.population.population.items())
 
-        car_ai = CarAI(genomes, config, self.decided_car_pos, self.track)
+        car_ai = CarAI(genomes, config, self.decided_car_pos, self.track, checkpoints_path=self.checkpoints_path)
         total_cars = len(car_ai.cars)
         frame_count = 0
         gen_top_speed = 0.0

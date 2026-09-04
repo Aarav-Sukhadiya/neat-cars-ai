@@ -29,7 +29,7 @@ class CarAI:
     TOTAL_GENERATIONS = 0
     MAX_FRAMES = 1200  # 1200 frames = exactly 20 simulated seconds at 60 FPS
 
-    def __init__(self, genomes: neat.DefaultGenome, config: neat.Config, start_position: list, track: Track):
+    def __init__(self, genomes: neat.DefaultGenome, config: neat.Config, start_position: list, track: Track, checkpoints_path: str = 'data/checkpoints.json'):
         CarAI.TOTAL_GENERATIONS += 1
 
         self.genomes = genomes
@@ -52,8 +52,8 @@ class CarAI:
         import os
         import json
         self.checkpoints = []
-        if os.path.exists('data/checkpoints.json'):
-            with open('data/checkpoints.json', 'r') as f:
+        if os.path.exists(checkpoints_path):
+            with open(checkpoints_path, 'r') as f:
                 self.checkpoints = json.load(f)
 
         for _, genome in genomes:

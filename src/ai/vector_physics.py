@@ -24,6 +24,7 @@ class VectorizedPhysics:
         
         # Checkpoint tracking
         self.has_checkpoints = len(checkpoints) > 0
+        self.max_fitness = np.zeros(self.num_cars, dtype=np.float32)
         if self.has_checkpoints:
             self.checkpoints = np.array(checkpoints, dtype=np.float32) # (N, 4)
             self.cp_index = np.zeros(self.num_cars, dtype=np.int32)
@@ -152,10 +153,10 @@ class VectorizedPhysics:
         """Only sync the cars that need to be drawn or accessed"""
         for i in alive_indices:
             car = self.cars[i]
-            car.position[0] = self.x[i]
-            car.position[1] = self.y[i]
-            car.angle = self.angle[i]
-            car.speed = self.speed[i]
+            car.position[0] = float(self.x[i])
+            car.position[1] = float(self.y[i])
+            car.angle = float(self.angle[i])
+            car.speed = float(self.speed[i])
             car.alive = self.alive[i]
-            car.center = [self.cx[i], self.cy[i]]
+            car.center = [float(self.cx[i]), float(self.cy[i])]
             car.max_fitness_achieved = self.max_fitness[i]

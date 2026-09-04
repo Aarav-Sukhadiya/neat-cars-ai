@@ -156,6 +156,17 @@ while running:
             elif event.key == pygame.K_MINUS:
                 road_width = max(10, road_width - 5)
 
+    keys = pygame.key.get_pressed()
+    pan_speed = 20.0 / zoom
+    if keys[pygame.K_LEFT]:
+        camera_x -= pan_speed
+    if keys[pygame.K_RIGHT]:
+        camera_x += pan_speed
+    if keys[pygame.K_UP]:
+        camera_y -= pan_speed
+    if keys[pygame.K_DOWN]:
+        camera_y += pan_speed
+
     screen.fill((40, 40, 40))
     
     def w2s(wx, wy):
@@ -196,7 +207,7 @@ while running:
     info = [
         "TRACK EDITOR (8000x8000)",
         "Left Click: Place Node",
-        "Right Click + Drag: Pan Camera",
+        "Right Click + Drag OR Arrow Keys: Pan Camera",
         "Scroll Wheel: Zoom in/out",
         f"Zoom: {zoom:.1f}x",
         "Ctrl+Z: Undo Node",

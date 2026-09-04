@@ -190,7 +190,7 @@ class Engine:
                 pickle.dump(winner, f)
             print(f"\nSaved best genome to 'best_car_brain.pkl'!")
         except StagnationTermination:
-            print("\n[!] Training terminated: All records have stagnated for more than 25 generations.")
+            print("\n[!] Training terminated: All records have stagnated for more than 50 generations.")
             if self.hall_of_fame:
                 winner = self.hall_of_fame[0][1]
                 with open("data/best_car_brain.pkl", "wb") as f:
@@ -429,12 +429,12 @@ class Engine:
             pass
 
         # CUSTOM STAGNATION TERMINATION
-        # If the Highest Fitness, Median Score, and Top Speed were all set more than 25 generations ago
+        # If the Highest Fitness, Median Score, and Top Speed were all set more than 50 generations ago
         gen_diff_fitness = car_ai.TOTAL_GENERATIONS - self.all_time_best_fitness[1]
         gen_diff_median = car_ai.TOTAL_GENERATIONS - self.all_time_best_median[1]
         gen_diff_survival = car_ai.TOTAL_GENERATIONS - self.all_time_survival_rate[1]
         
-        if not self.infinite and gen_diff_fitness > 25 and gen_diff_median > 25 and gen_diff_survival > 25:
+        if not self.infinite and gen_diff_fitness > 50 and gen_diff_median > 50 and gen_diff_survival > 50:
             if hasattr(self, 'StagnationTermination'):
                 raise self.StagnationTermination()
                 

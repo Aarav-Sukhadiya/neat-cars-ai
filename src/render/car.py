@@ -75,21 +75,20 @@ class Car:
         self.penalty_factor = self.track_diagonal / 1000
 
     def draw(self, track: pygame.Surface) -> None:
-        """Draw the car on the track (and its sensors if enabled)
-
-        Args:
-            track (pygame.Surface): The track on which the car will be drawn
-        """
+        """Draw the car polygon on the track (and its sensors if enabled)"""
         
-        if self.alive:
-            track.blit(self.sprite, self.position)
-        else:
-            # Switch to the dead sprite (loaded once via class-level cache)
-            if not self.has_been_rendered_as_dead:
-                self._sprite = self._get_shared_dead_sprite()
-                self.update_center()
-                self.has_been_rendered_as_dead = True
-            track.blit(self.sprite, self.position)
+        if not hasattr(self, 'corners') or not self.corners:
+            return
+            
+        color = Color.BLUE if self.alive else Color.RED
+        
+        # self.corners is ordered: front-right, back-right, back-left, front-left
+        pygame.draw.polygon(track, color, self.corners)
+        
+        # Draw the front "windshield" / nose indicator (between front-left and front-right)
+        front_left = self.corners[3]
+        front_right = self.corners[0]
+        pygame.draw.line(track, Color.YELLOW, front_left, front_right, 4)
 
         # Draw the car's sensors
         if Car.DRAW_SENSORS and self.alive:

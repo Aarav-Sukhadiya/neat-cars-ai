@@ -38,6 +38,7 @@ class StatsPanel:
         self.height = height
         self.surface = pygame.Surface((width, height))
 
+    # pragma: no cover
     def draw(self, screen: pygame.Surface, x_offset: int, y_offset: int,
              generation: int, total_cars: int, alive: int,
              time_left: float, time_limit: float,

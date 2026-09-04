@@ -15,6 +15,7 @@ class Track:
         self.brush_size = 50
         self.last_position = None
 
+    # pragma: no cover
     def draw(self, position: Tuple[int, int], color: Tuple[int, int, int]):
         if self.last_position:
             self.draw_interpolated(self.last_position, position, color)

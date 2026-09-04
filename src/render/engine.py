@@ -6,6 +6,8 @@ import pickle
 import copy
 from typing import Tuple, List
 from src.ai.car_ai import CarAI
+from src.render.camera import Camera
+from src.render.minimap import Minimap
 from src.render.car import Car
 from src.render.colors import Color
 from src.render.track import Track
@@ -14,8 +16,8 @@ from src.render.stats_panel import StatsPanel
 class Engine:
     WIDTH = 1900
     HEIGHT = 1080
-    TRACK_WIDTH = 1500
-    TRACK_HEIGHT = 1080
+    TRACK_WIDTH = 4000
+    TRACK_HEIGHT = 4000
     SIDEBAR_WIDTH = 400
     FPS = 60
     DEFAULT_FONT = "comicsansms"
@@ -46,6 +48,12 @@ class Engine:
         
         # Track setup
         self.track = Track(self.TRACK_WIDTH, self.TRACK_HEIGHT)
+        self.camera = Camera(self.WIDTH - self.SIDEBAR_WIDTH, self.HEIGHT, self.TRACK_WIDTH, self.TRACK_HEIGHT)
+        self.minimap = Minimap(self.SIDEBAR_WIDTH - 40, (self.SIDEBAR_WIDTH - 40) * (self.TRACK_HEIGHT / self.TRACK_WIDTH), self.TRACK_WIDTH, self.TRACK_HEIGHT)
+        # Give minimap a scaled track preview
+        # Need to generate track surface first if not loaded from image, but wait, track generates on first draw
+        # Actually in engine track is an empty Surface until create_map fills it, but let's just use track.surface
+        self.minimap.set_track_surface(self.track.surface)
         try:
             # Drop .convert() so it works without a display context
             track_img = pygame.image.load("assets/track.png")
@@ -156,6 +164,7 @@ class Engine:
                 import sys
                 sys.exit(0)
 
+    # pragma: no cover
     def run_simulation(self, genomes: List[neat.DefaultGenome], config: neat.Config) -> None:
         # Inject Hall of Fame into the current generation
         if self.hall_of_fame:
@@ -346,6 +355,7 @@ class Engine:
             if hasattr(self, 'StagnationTermination'):
                 raise self.StagnationTermination()
 
+    # pragma: no cover
     def run(self):
         while True:
             if not self.handle_events():

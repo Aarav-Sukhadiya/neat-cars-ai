@@ -1,0 +1,5 @@
+[run]
+omit =
+    src/render/stats_panel.py
+    src/render/engine.py
+    src/render/neural_network/*

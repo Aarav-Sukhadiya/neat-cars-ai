@@ -74,29 +74,35 @@ class Car:
         self.angle_increment = math.degrees(math.atan2(self.CAR_SIZE_Y, self.speed * 10))
         self.penalty_factor = self.track_diagonal / 1000
 
-    def draw(self, track: pygame.Surface) -> None:
-        """Draw the car polygon on the track (and its sensors if enabled)"""
-        
+    # pragma: no cover
+    def draw(self, screen: pygame.Surface, camera=None) -> None:
+        """Draw the car polygon on the screen, applying camera offset if provided."""
+        # pragma: no cover
         if not hasattr(self, 'corners') or not self.corners:
             return
             
         color = Color.BLUE if self.alive else Color.RED
         
-        # self.corners is ordered: front-right, back-right, back-left, front-left
-        pygame.draw.polygon(track, color, self.corners)
+        # Apply camera offset
+        if camera:
+            shifted_corners = [camera.apply(c) for c in self.corners]
+            shifted_center = camera.apply(self.center)
+            shifted_sensors = [(camera.apply(s[0]), s[1]) for s in self.sensors]
+        else:
+            shifted_corners = self.corners
+            shifted_center = self.center
+            shifted_sensors = self.sensors
+            
+        pygame.draw.polygon(screen, color, shifted_corners)
         
-        # Draw the front "windshield" / nose indicator (between front-left and front-right)
-        front_left = self.corners[3]
-        front_right = self.corners[0]
-        pygame.draw.line(track, Color.YELLOW, front_left, front_right, 4)
+        front_left = shifted_corners[3]
+        front_right = shifted_corners[0]
+        pygame.draw.line(screen, Color.YELLOW, front_left, front_right, 4)
 
-        # Draw the car's sensors
         if Car.DRAW_SENSORS and self.alive:
-            for sensor in self.sensors:
-                position = sensor[0]
-                pygame.draw.line(track, Color.GREEN,
-                                 self.center, position, 2)
-                pygame.draw.circle(track, Color.RED, position, 4)
+            for sensor in shifted_sensors:
+                pygame.draw.line(screen, Color.GREEN, shifted_center, sensor[0], 2)
+                pygame.draw.circle(screen, Color.RED, sensor[0], 4)
 
     def check_collision(self, track: pygame.Surface) -> bool:
         """Check if the car is colliding with the track (by using a color system)

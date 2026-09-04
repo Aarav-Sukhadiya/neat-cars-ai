@@ -346,7 +346,8 @@ class Engine:
                             self.screen.blit(font_surf, (mid_x, mid_y))
                         
                 for car in car_ai.cars:
-                    car.draw(self.screen, self.camera)
+                    if car.alive:
+                        car.draw(self.screen, self.camera)
 
                 if best_car:
                     shifted_center = self.camera.apply(best_car.center)

@@ -275,6 +275,7 @@ class Engine:
                     print(f" Best Fitness  : {car_ai.best_fitness:,.1f}")
                     print(f" Median Fitness: {median_fitness:,.1f}")
                     print(f" Survival Rate : {(car_ai.remaining_cars / total_cars * 100.0):.1f}%")
+                    print(f" Live Top Speed: {max_speed:.1f} px/s")
                     print(f" Brain Size    : {best_net_nodes} Nodes / {best_net_conns} Conns")
                     print("==================================================")
                     if self.prev_gen_stats:
@@ -282,7 +283,8 @@ class Engine:
                         print("==================================================")
                         print(f" Best Fitness  : {self.prev_gen_stats['best_fitness']:,.1f}")
                         print(f" Peak Median   : {self.prev_gen_stats['median_fitness']:,.1f}")
-                        print(f" Survival Rate : {(car_ai.remaining_cars / total_cars * 100.0):.1f}%")
+                        print(f" Survival Rate : {self.prev_gen_stats['survival_rate']:.1f}%")
+                        print(f" Top Speed     : {self.prev_gen_stats['top_speed']:.1f} px/s")
                         print("==================================================")
                     print(f" ALL-TIME RECORDS (Across Generations)")
                     print("==================================================")
@@ -385,7 +387,8 @@ class Engine:
             'gen': car_ai.TOTAL_GENERATIONS,
             'best_fitness': best_survivor_fit,
             'median_fitness': gen_best_median,
-            'survival_rate': survival_rate
+            'survival_rate': survival_rate,
+            'top_speed': best_survivor_speed
         }
 
         # GENERATION ENDED: Update Hall of Fame

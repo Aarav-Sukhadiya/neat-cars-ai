@@ -22,6 +22,17 @@
                 3000
             ],
             "start_angle": 90
+        },
+        "super_hard": {
+            "name": "Super Hard",
+            "image": "assets/tracks/super_hard.png",
+            "checkpoints": "data/tracks/super_hard.json",
+            "max_frames": 7200,
+            "start_pos": [
+                500,
+                3500
+            ],
+            "start_angle": 0
         }
     }
 }

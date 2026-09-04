@@ -20,12 +20,11 @@ class Engine:
     FPS = 60
     DEFAULT_FONT = "comicsansms"
 
-    HEADLESS = True
-
-    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int):
+    def __init__(self, neat_config_path: str, debug: bool, max_simulations: int, headless: bool = False):
         self.neat_config_path = neat_config_path
         self.debug = debug
         self.max_simulations = max_simulations
+        self.HEADLESS = headless
         self.title = "Neat Cars"
         
         self.all_time_best_fitness = (0.0, 0)

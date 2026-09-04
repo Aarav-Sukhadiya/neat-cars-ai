@@ -1,6 +1,6 @@
 # ------------------ IMPORTS ------------------
 
-
+import argparse
 from src.render.engine import Engine
 
 
@@ -16,8 +16,17 @@ MAX_SIMULATIONS = 1000
 
 
 def main() -> None:
-    window = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS)
-    window.run()
+    parser = argparse.ArgumentParser(description="Run the NEAT Cars AI Simulation.")
+    parser.add_argument('--headless', action='store_true', help="Run the simulation without a GUI (faster).")
+    parser.add_argument('--visual', action='store_false', dest='headless', help="Run the simulation with PyGame GUI.")
+    # Default to headless if they don't specify, or default to visual.
+    # The user asked for "option of headless mode and visual model by --visual or --headless flags"
+    # Let's set the default to visual since games usually default to visual.
+    parser.set_defaults(headless=False)
+    args = parser.parse_args()
+
+    engine = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS, headless=args.headless)
+    engine.run()
 
 
 # ------------------ MAIN CALL ------------------

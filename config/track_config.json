@@ -33,6 +33,17 @@
                 3500
             ],
             "start_angle": 0
+        },
+        "custom": {
+            "name": "Custom Editor Map",
+            "image": "assets/tracks/custom.png",
+            "checkpoints": "data/tracks/custom.json",
+            "max_frames": 7200,
+            "start_pos": [
+                200,
+                200
+            ],
+            "start_angle": 0
         }
     }
 }

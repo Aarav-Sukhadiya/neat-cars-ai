@@ -11,14 +11,14 @@ from src.render.colors import Color
 
 
 class NN:
-    INPUT_NEURONS = 5
+    INPUT_NEURONS = 7
     OUTPUT_NEURONS = 4
 
     def __init__(self, config: neat.Config, genome: neat.DefaultGenome, pos: tuple):
         self.nodes = []
         self.genome = genome
         self.pos = (int(pos[0]+Node.RADIUS), int(pos[1]))
-        input_names = ["0°", "45°", "90°", "135°", "180°"]
+        input_names = ["-90°", "-45°", "-20°", "0°", "20°", "45°", "90°"]
         output_names = ["Left", "Right", "Accelerate", "Brake"]
         hidden_nodes = [n for n in genome.nodes.keys()]
         node_id_list = []

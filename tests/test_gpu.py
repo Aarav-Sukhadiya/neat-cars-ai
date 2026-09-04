@@ -86,7 +86,7 @@ def _make_neat_config():
         node_add_prob           = 0.0
         node_delete_prob        = 0.0
         num_hidden              = 0
-        num_inputs              = 5
+        num_inputs               = 7
         num_outputs             = 4
         response_init_mean      = 1.0
         response_init_stdev     = 0.0
@@ -273,7 +273,7 @@ class Test3_GPUInference(unittest.TestCase):
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         nets = [neat.nn.FeedForwardNetwork.create(g, self.config) for _, g in self.genomes]
         np.random.seed(42)
-        inputs = np.random.uniform(-500, 500, (len(self.genomes), 5)).astype(np.float32)
+        inputs = np.random.uniform(-500, 500, (len(self.genomes), 7)).astype(np.float32)
         gpu_out = gpu_inf.activate_all(inputs)
         for i, net in enumerate(nets):
             ref = np.array(net.activate(inputs[i].tolist()), dtype=np.float32)
@@ -287,7 +287,7 @@ class Test3_GPUInference(unittest.TestCase):
     def test_output_shape(self):
         from src.gpu.gpu_inference import GPUBatchInference
         gpu_inf = GPUBatchInference(self.genomes, self.config)
-        out = gpu_inf.activate_all(np.ones((len(self.genomes), 5), dtype=np.float32))
+        out = gpu_inf.activate_all(np.ones((len(self.genomes), 7), dtype=np.float32))
         self.assertEqual(out.shape, (len(self.genomes), 4))
 
     def test_argmax_choice_matches(self):
@@ -297,7 +297,7 @@ class Test3_GPUInference(unittest.TestCase):
         gpu_inf = GPUBatchInference(self.genomes, self.config)
         nets    = [neat.nn.FeedForwardNetwork.create(g, self.config) for _, g in self.genomes]
         np.random.seed(99)
-        inputs = np.random.uniform(0, 800, (len(self.genomes), 5)).astype(np.float32)
+        inputs = np.random.uniform(0, 800, (len(self.genomes), 7)).astype(np.float32)
         gpu_choices = np.argmax(gpu_inf.activate_all(inputs), axis=1)
         for i, net in enumerate(nets):
             ref_out    = net.activate(inputs[i].tolist())
@@ -375,14 +375,14 @@ class Test5_Performance(unittest.TestCase):
 
     def test_gpu_inference_benchmark(self):
         """Benchmark GPU vs CPU inference and print speedup. No hard assertion —
-        small flat NEAT networks (5→4 nodes) have minimal CPU overhead per call.
+        small flat NEAT networks (7→4 nodes) have minimal CPU overhead per call.
         The GPU advantage compounds at scale with hidden layers & many cars."""
         import neat
         from src.gpu.gpu_inference import GPUBatchInference
 
         # Use actual len(genomes) because _make_population maxes out at config's pop_size
         actual_cars = len(self.genomes)
-        inputs  = np.random.uniform(0, 1000, (actual_cars, 5)).astype(np.float32)
+        inputs  = np.random.uniform(0, 1000, (actual_cars, 7)).astype(np.float32)
         gpu_inf = GPUBatchInference(self.genomes, self.config)
 
         # Warm-up (CUDA JIT, kernel compile, CUBLAS initialisation)

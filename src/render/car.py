@@ -297,9 +297,9 @@ class Car:
         # Check collisions
         self.check_collision(track)
 
-        # Clear radars and rewrite them (-90, -45, 0, 45, 90)
+        # Clear radars and rewrite them (-90, -45, -20, 0, 20, 45, 90)
         self.sensors.clear()
-        for sensor_angle in range(-90, 90 + 1, 45):
+        for sensor_angle in [-90, -45, -20, 0, 20, 45, 90]:
             self.check_sensor(sensor_angle, track)
 
     def get_data(self) -> list[int]:
@@ -312,7 +312,7 @@ class Car:
         distances = [int(sensor[1]) for sensor in self.sensors]
 
         # Ensure list has five elements (to correspond to)
-        distances += [0] * (5 - len(distances))
+        distances += [0] * (7 - len(distances))
 
         return distances
 

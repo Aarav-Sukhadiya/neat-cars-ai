@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument('--track', type=int, default=0, help="Track ID to load (0 = default)")
     parser.add_argument('--headless', action='store_true', help="Run the simulation without a GUI (faster).")
     parser.add_argument('--infinite', action='store_true', help="Train infinitely (disables stagnation termination).")
+    parser.add_argument('--target-survival', type=float, default=0.0, help="Terminate training early if the survival rate reaches this percentage.")
     parser.add_argument('--visual', action='store_false', dest='headless', help="Run the simulation with PyGame GUI.")
     # Default to headless if they don't specify, or default to visual.
     # The user asked for "option of headless mode and visual model by --visual or --headless flags"
@@ -27,7 +28,7 @@ def main() -> None:
     parser.set_defaults(headless=False)
     args = parser.parse_args()
 
-    engine = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS, headless=args.headless, track_id=args.track, infinite=args.infinite)
+    engine = Engine(NEAT_CONFIG_PATH, RAY_CAST, MAX_SIMULATIONS, headless=args.headless, track_id=args.track, infinite=args.infinite, target_survival=args.target_survival)
     engine.run()
 
 

@@ -119,12 +119,19 @@ def main():
 
     font = pygame.font.SysFont(None, 36)
 
+    zoom = 1.0
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
                 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 4:
+                    zoom = min(4.0, zoom + 0.1)
+                elif event.button == 5:
+                    zoom -= 0.1 # Clamped later
+                    
             # Reset car if dead
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r and not car.alive:
@@ -136,29 +143,46 @@ def main():
             car.handle_input(keys)
             car.update_sprite(track.surface)
 
-        camera.update(car.center)
-
         # Render
         screen.fill((15, 15, 20))
         
-        # 1. Track
-        screen.blit(track.surface, (-camera.offset_x, -camera.offset_y))
+        game_w = WIDTH - SIDEBAR_WIDTH
+        game_h = HEIGHT
+        
+        # Clamp zoom to prevent crashing subsurface
+        min_zoom = max(game_w / track_w, game_h / track_h, 0.1)
+        zoom = max(min_zoom, zoom)
+        
+        view_w = game_w / zoom
+        view_h = game_h / zoom
+        
+        cam_x = max(0, min(car.center[0] - view_w / 2, track_w - view_w))
+        cam_y = max(0, min(car.center[1] - view_h / 2, track_h - view_h))
+        
+        # 1. Track Subsurface
+        sub_rect = pygame.Rect(int(cam_x), int(cam_y), int(view_w), int(view_h))
+        visible_track = track.surface.subsurface(sub_rect)
+        scaled_track = pygame.transform.scale(visible_track, (game_w, game_h))
+        screen.blit(scaled_track, (0, 0))
+        
+        def w2s(x, y):
+            return int((x - cam_x) * zoom), int((y - cam_y) * zoom)
 
         # 2. Checkpoints
         if car.checkpoints:
             for cp in car.checkpoints:
-                pygame.draw.line(screen, (0, 255, 0), camera.apply((cp[0], cp[1])), camera.apply((cp[2], cp[3])), 2)
+                pygame.draw.line(screen, (0, 255, 0), w2s(cp[0], cp[1]), w2s(cp[2], cp[3]), max(1, int(2*zoom)))
 
         # 3. Car & Sensors
         if car.alive:
-            shifted_corners = [camera.apply(c) for c in car.corners]
+            shifted_corners = [w2s(c[0], c[1]) for c in car.corners]
             pygame.draw.polygon(screen, Color.BLUE, shifted_corners)
             
-            shifted_center = camera.apply(car.center)
+            shifted_center = w2s(car.center[0], car.center[1])
             for sensor in car.sensors:
-                shifted_sensor = camera.apply(sensor[0])
-                pygame.draw.line(screen, Color.GREEN, shifted_center, shifted_sensor, 2)
-                pygame.draw.circle(screen, Color.RED, shifted_sensor, 4)
+                shifted_sensor = w2s(sensor[0][0], sensor[0][1])
+                pygame.draw.line(screen, Color.GREEN, shifted_center, shifted_sensor, max(1, int(2*zoom)))
+                pygame.draw.circle(screen, Color.RED, shifted_sensor, max(2, int(4*zoom)))
 
         # 4. Sidebar UI
         sidebar_rect = pygame.Rect(WIDTH - SIDEBAR_WIDTH, 0, SIDEBAR_WIDTH, HEIGHT)

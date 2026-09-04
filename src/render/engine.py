@@ -261,20 +261,29 @@ class Engine:
                     print("==================================================")
             else:
                 self.screen.fill((15, 15, 20))
-                self.screen.blit(self.track.get_surface(), (0, 0))
+                # Blit track with camera offset
+                self.screen.blit(self.track.get_surface(), (-self.camera.offset_x, -self.camera.offset_y))
                 
                 for car in car_ai.cars:
                     if car.alive:
-                        car.draw(self.screen)
+                        car.draw(self.screen, self.camera)
 
                 if best_car:
+                    shifted_center = self.camera.apply(best_car.center)
                     for sensor in best_car.sensors:
-                        pygame.draw.line(self.screen, Color.GREEN, best_car.center, sensor[0], 2)
-                        pygame.draw.circle(self.screen, Color.RED, sensor[0], 4)
+                        shifted_sensor = self.camera.apply(sensor[0])
+                        pygame.draw.line(self.screen, Color.GREEN, shifted_center, shifted_sensor, 2)
+                        pygame.draw.circle(self.screen, Color.RED, shifted_sensor, 4)
 
+                # Minimap in Top Left (20, 20)
+                minimap_x, minimap_y = 20, 20
+                cam_rect = pygame.Rect(self.camera.offset_x, self.camera.offset_y, self.camera.width, self.camera.height)
+                self.minimap.draw(self.screen, car_ai.cars, cam_rect, (minimap_x, minimap_y))
+
+                # Stats on the Right (Sidebar)
                 self.stats_panel.draw(
                     self.screen, 
-                    x_offset=self.TRACK_WIDTH, y_offset=0,
+                    x_offset=self.WIDTH - self.SIDEBAR_WIDTH, y_offset=0,
                     generation=car_ai.TOTAL_GENERATIONS,
                     total_cars=total_cars,
                     alive=car_ai.remaining_cars,

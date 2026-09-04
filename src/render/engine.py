@@ -192,8 +192,10 @@ class Engine:
 
     # pragma: no cover
     def run_simulation(self, genomes: List[neat.DefaultGenome], config: neat.Config) -> None:
-        # Inject Hall of Fame into the current generation
-        if self.hall_of_fame:
+        # Inject Hall of Fame into the current generation ONLY on Generation 0 (to load the save file)
+        # Doing this every generation is an anti-pattern (Hyper-Elitism) that destroys genetic diversity.
+        # NEAT's native `elitism` parameter handles generation-to-generation preservation perfectly.
+        if self.hall_of_fame and self.population.generation == 0:
             pop_keys = list(self.population.population.keys())
             for i, (fit, elite_genome) in enumerate(self.hall_of_fame):
                 if i < len(pop_keys):

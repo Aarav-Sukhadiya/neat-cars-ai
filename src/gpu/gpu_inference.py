@@ -105,7 +105,7 @@ class GPUBatchInference:
             # X_new = tanh((W * X + B) * R)
             # W is (cars, nodes, nodes), X is (cars, nodes, 1)
             agg = torch.bmm(self.W, X.unsqueeze(2)).squeeze(2)
-            X_new = torch.tanh((agg + self.B) * self.R)
+            X_new = torch.tanh(2.5 * (self.B + self.R * agg))
             
             # Keep inputs untouched
             X_new[:, :self.n_inputs] = X[:, :self.n_inputs]

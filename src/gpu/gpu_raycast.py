@@ -21,7 +21,7 @@ except ImportError:
 
 
 # Sensor angles relative to the car's heading (degrees)
-SENSOR_ANGLES_DEG = [-90, -45, 0, 45, 90]
+SENSOR_ANGLES_DEG = [-90, -45, -20, 0, 20, 45, 90]
 MAX_RAY_STEPS = 1920          # matches Car.SENSORS_DRAW_DISTANCE
 
 

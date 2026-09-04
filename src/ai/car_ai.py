@@ -5,6 +5,7 @@ import neat
 import pygame
 import numpy as np
 from src.render.car import Car, Action
+from src.ai.vector_physics import VectorizedPhysics
 from src.render.neural_network.nn import NN
 from src.render.track import Track
 
@@ -90,6 +91,8 @@ class CarAI:
         # Pre-allocate a reusable inputs buffer for all cars
         n_inputs = len(config.genome_config.input_keys)
         self._inputs_buf = np.zeros((len(self.cars), n_inputs), dtype=np.float32)
+        
+        self.vector_physics = VectorizedPhysics(self.cars, track.width, track.height, self.checkpoints)
 
     def _get_nn(self, i: int) -> NN:
         """Return the NN visualisation for car i, creating it lazily on first access."""
@@ -139,77 +142,72 @@ class CarAI:
         6. Update fitness.
         """
 
-        alive_indices = [i for i, car in enumerate(self.cars) if car.alive]
-        if not alive_indices:
+        # ---- VECTORIZED COMPUTE ------------------------------------
+        alive_mask = self.vector_physics.alive
+        alive_indices = np.where(alive_mask)[0]
+        if len(alive_indices) == 0:
+            self.remaining_cars = 0
             return
 
-        # ---- Step 1 & 2: GPU batch raycast --------------------------------
+        track_pixels = self._get_track_pixels(track)
+
+        # 1. GPU Raycast (using vector_physics centers directly!)
         if self._gpu_raycast is not None:
-            track_pixels = self._get_track_pixels(track)
-            alive_cars = [self.cars[i] for i in alive_indices]
-            cx     = np.array([c.center[0] for c in alive_cars], dtype=np.float32)
-            cy     = np.array([c.center[1] for c in alive_cars], dtype=np.float32)
-            angles = np.array([c.angle     for c in alive_cars], dtype=np.float32)
-
+            cx = self.vector_physics.cx[alive_mask]
+            cy = self.vector_physics.cy[alive_mask]
+            angles = self.vector_physics.angle[alive_mask]
+            
             distances, hit_x, hit_y = self._gpu_raycast.compute(track_pixels, cx, cy, angles)
+            
+            # FAST INJECT: directly write distances to inputs_buf
+            self._inputs_buf[alive_indices] = distances
+            
+            # Sync hit points for drawing (only for active cars)
+            # This is slightly slow but necessary if Pygame rendering is on and you want laser lines
+            for li, idx in enumerate(alive_indices):
+                self.cars[idx].sensors = [[(int(hx), int(hy)), int(d)] for hx, hy, d in zip(hit_x[li], hit_y[li], distances[li])]
+        else:
+            # Fallback
+            for i in alive_indices:
+                self.cars[i].update_center()
+                self.cars[i].sensors.clear()
+                for sensor_angle in [-90, -45, -20, 0, 20, 45, 90]:
+                    self.cars[i].check_sensor(sensor_angle, track)
+                self._inputs_buf[i, :] = self.cars[i].get_data()
 
-            for li, i in enumerate(alive_indices):
-                self.cars[i].inject_sensors(
-                    distances[li].tolist(),
-                    list(zip(hit_x[li].tolist(), hit_y[li].tolist()))
-                )
-        # If no GPU raycast, sensors will be computed inside update_sprite()
-
-        # ---- Step 3 & 4: Inputs & Batched GPU Inference -------------------
-        for i in alive_indices:
-            self._inputs_buf[i, :] = self.cars[i].get_data()
-
+        # 2. Batched GPU Inference
         if self._gpu_inference is not None:
             all_outputs_full = self._gpu_inference.activate_all(self._inputs_buf)
             all_outputs = all_outputs_full[alive_indices]
         else:
             all_outputs = np.zeros((len(alive_indices), 4), dtype=np.float32)
             for li, i in enumerate(alive_indices):
-                out = self.nets[i].activate(self._inputs_buf[i].tolist())
-                all_outputs[li] = out
+                all_outputs[li] = self.nets[i].activate(self._inputs_buf[i].tolist())
 
-        # ---- Step 5: Apply outputs ----------------------------------------
-        choices = np.argmax(all_outputs, axis=1)  # (N_alive,)
+        choices = np.argmax(all_outputs, axis=1)
 
-        for li, i in enumerate(alive_indices):
-            car    = self.cars[i]
-            choice = int(choices[li])
-
-            # Update NN visualisation node data ONLY for the current best car
-            # (avoids iterating nodes for all 2000 cars every frame)
-            if self.best_nn is not None and self.nns[i] is self.best_nn:
-                for node in self.best_nn.nodes:
-                    node.inputs = self.cars[i].get_data()
-                    node.output = choice
-
-            if choice == Action.TURN_LEFT:
-                car.turn_left()
-            elif choice == Action.TURN_RIGHT:
-                car.turn_right()
-            elif choice == Action.ACCELERATE:
-                car.accelerate()
-            elif choice == Action.BRAKE:
-                car.brake()
-
-        # ---- Step 6: Physics + fitness ------------------------------------
+        # 3. Vectorized Physics Step
+        full_choices = np.zeros(len(self.cars), dtype=np.int32)
+        full_choices[alive_indices] = choices
+        
+        self.vector_physics.step(full_choices, track_pixels)
+        self.vector_physics.update_fitness()
+        
+        # 4. Sync State back to Python objects (for Pygame rendering and NEAT genomes)
+        self.vector_physics.sync_to_cars(alive_indices)
+        
+        # 5. Extract Fitness
         self.remaining_cars = 0
-        for i, car in enumerate(self.cars):
-            if not car.alive:
-                continue
-
-            if self._gpu_raycast is not None:
-                car.update_physics(track)
-            else:
-                car.update_sprite(track)
-
-            if car.alive:
+        for li, i in enumerate(alive_indices):
+            if self.vector_physics.alive[i]:
                 self.remaining_cars += 1
-                self.genomes[i][1].fitness = car.get_reward()
-                if self.genomes[i][1].fitness > self.best_fitness:
-                    self.best_fitness = self.genomes[i][1].fitness
-                    self.best_nn = self._get_nn(i)   # lazy creation
+                fit = self.vector_physics.max_fitness[i]
+                self.genomes[i][1].fitness = fit
+                if fit > self.best_fitness:
+                    self.best_fitness = fit
+                    self.best_nn = self._get_nn(i)
+                    if self.best_nn is not None:
+                        # Update visualizer
+                        for node in self.best_nn.nodes:
+                            node.inputs = self._inputs_buf[i]
+                            node.output = choices[li]

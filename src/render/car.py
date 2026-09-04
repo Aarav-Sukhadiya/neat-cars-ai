@@ -227,6 +227,8 @@ class Car:
 
     def update_physics(self, track: pygame.Surface) -> None:
         """Update car physics (position, collision) WITHOUT computing sensors."""
+        if self.alive:
+            self.frames_alive += 1
         old_center = self.center.copy() if hasattr(self, 'center') and self.center else [self.position[0], self.position[1]]
         self.update_center()
 
@@ -236,6 +238,10 @@ class Car:
 
         self.position[0] += cos * self.speed
         self.position[1] += sin * self.speed
+        
+        # Update total distance for average speed calculation
+        if self.alive:
+            self.driven_distance += self.speed
         
         self.update_center()
         new_center = self.center
@@ -277,6 +283,10 @@ class Car:
         # Move car to new position
         self.position[0] += cos * self.speed
         self.position[1] += sin * self.speed
+        
+        # Update total distance for average speed calculation
+        if self.alive:
+            self.driven_distance += self.speed
 
         # Update the driven distance with the speed
         self.update_adaptive_parameters()

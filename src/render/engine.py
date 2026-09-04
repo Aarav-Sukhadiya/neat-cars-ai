@@ -248,6 +248,7 @@ class Engine:
                     if genome.fitness is not None and genome.fitness > max_fit:
                         max_fit = genome.fitness
                         best_car = car
+            max_speed_sec = max_speed * 60.0
 
             fitnesses = [g.fitness for _, g in car_ai.genomes if g.fitness is not None]
             median_fitness = float(np.median(fitnesses)) if fitnesses else 0.0
@@ -275,7 +276,7 @@ class Engine:
                     print(f" Best Fitness  : {car_ai.best_fitness:,.1f}")
                     print(f" Median Fitness: {median_fitness:,.1f}")
                     print(f" Survival Rate : {(car_ai.remaining_cars / total_cars * 100.0):.1f}%")
-                    print(f" Live Top Speed: {max_speed:.1f} px/s")
+                    print(f" Live Top Speed: {max_speed_sec:,.1f} px/s")
                     print(f" Brain Size    : {best_net_nodes} Nodes / {best_net_conns} Conns")
                     print("==================================================")
                     if self.prev_gen_stats:
@@ -284,14 +285,14 @@ class Engine:
                         print(f" Best Fitness  : {self.prev_gen_stats['best_fitness']:,.1f}")
                         print(f" Peak Median   : {self.prev_gen_stats['median_fitness']:,.1f}")
                         print(f" Survival Rate : {self.prev_gen_stats['survival_rate']:.1f}%")
-                        print(f" Avg Speed     : {self.prev_gen_stats['avg_speed']:.1f} px/f")
+                        print(f" Avg Speed     : {self.prev_gen_stats['avg_speed']:,.1f} px/s")
                         print("==================================================")
                     print(f" ALL-TIME RECORDS (Across Generations)")
                     print("==================================================")
                     print(f" Highest Fitness      : {self.all_time_best_fitness[0]:,.1f} (Gen {self.all_time_best_fitness[1]})")
                     print(f" Highest Median Score : {self.all_time_best_median[0]:,.1f} (Gen {self.all_time_best_median[1]})")
                     print(f" Highest Survival Rate: {self.all_time_survival_rate[0]:.1f} % (Gen {self.all_time_survival_rate[1]})")
-                    print(f" Highest Avg Speed    : {self.all_time_avg_speed[0]:.1f} px/f (Gen {self.all_time_avg_speed[1]})")
+                    print(f" Highest Avg Speed    : {self.all_time_avg_speed[0]:,.1f} px/s (Gen {self.all_time_avg_speed[1]})")
                     print("==================================================")
             else:
                 self.screen.fill((15, 15, 20))
@@ -368,19 +369,21 @@ class Engine:
         # However, Top Speed and Highest Fitness STILL mandate that the car survives the full timer.
         
         best_survivor_fit = 0.0
-        best_avg_speed = 0.0
+        
+        best_car_overall = max(zip(car_ai.cars, car_ai.genomes), key=lambda x: x[1][1].fitness if x[1][1].fitness is not None else -9999)[0]
+        best_avg_speed = (best_car_overall.driven_distance / max(1, best_car_overall.frames_alive)) * 60.0
+        best_avg_speed = (best_car_overall.driven_distance / max(1, best_car_overall.frames_alive)) * 60.0
+
+        if best_avg_speed > self.all_time_avg_speed[0]:
+            self.all_time_avg_speed = (best_avg_speed, car_ai.TOTAL_GENERATIONS)
         
         if survivors:
             best_survivor_fit = max([g.fitness for c, g in survivors if g.fitness is not None] + [0.0])
-            # Calculate Average Speed = total distance / frames alive
-            best_avg_speed = max([(c.driven_distance / max(1, c.frames_alive)) for c, g in survivors] + [0.0])
 
             if best_survivor_fit > self.all_time_best_fitness[0]:
                 self.all_time_best_fitness = (best_survivor_fit, car_ai.TOTAL_GENERATIONS)
             if survival_rate > self.all_time_survival_rate[0]:
                 self.all_time_survival_rate = (survival_rate, car_ai.TOTAL_GENERATIONS)
-            if best_avg_speed > self.all_time_avg_speed[0]:
-                self.all_time_avg_speed = (best_avg_speed, car_ai.TOTAL_GENERATIONS)
 
         # Save final generation stats to display next round
         # As requested, only show the best fitness and top speed of ALIVE cars from that generation.

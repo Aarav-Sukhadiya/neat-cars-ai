@@ -90,16 +90,21 @@ class Engine:
 
         self.clock = pygame.time.Clock()
         
-        # Track setup
-        self.track = Track(self.TRACK_WIDTH, self.TRACK_HEIGHT)
-        self.camera = Camera(self.WIDTH - self.SIDEBAR_WIDTH, self.HEIGHT, self.TRACK_WIDTH, self.TRACK_HEIGHT)
-        self.minimap = Minimap(self.SIDEBAR_WIDTH - 40, (self.SIDEBAR_WIDTH - 40) * (self.TRACK_HEIGHT / self.TRACK_WIDTH), self.TRACK_WIDTH, self.TRACK_HEIGHT)
+        # Load track image first to get real dimensions
         try:
-            # Drop .convert() so it works without a display context
             track_img = pygame.image.load(self.track_image_path)
-            self.track.surface.blit(track_img, (0, 0))
+            track_w, track_h = track_img.get_size()
         except Exception as e:
-            print(f"Warning: Could not load track.png: {e}")
+            print(f"Warning: Could not load track image: {e}")
+            track_img = None
+            track_w, track_h = 4000, 4000
+
+        self.track = Track(track_w, track_h)
+        self.camera = Camera(self.WIDTH - self.SIDEBAR_WIDTH, self.HEIGHT, track_w, track_h)
+        self.minimap = Minimap(self.SIDEBAR_WIDTH - 40, (self.SIDEBAR_WIDTH - 40) * (track_h / track_w), track_w, track_h)
+
+        if track_img is not None:
+            self.track.surface.blit(track_img, (0, 0))
             
         # Give minimap a scaled track preview NOW that the track is loaded
         self.minimap.set_track_surface(self.track.surface)
@@ -153,7 +158,7 @@ class Engine:
         if self.state == "placing_start_point" or self.state == "ai_running":
             self.screen.blit(self.car.sprite, self.car.position)
         self.stats_panel.draw(
-            self.screen, x_offset=self.TRACK_WIDTH, y_offset=0,
+            self.screen, x_offset=self.track.width, y_offset=0,
             generation=0, total_cars=0, alive=0,
             time_left=0.0, time_limit=CarAI.MAX_FRAMES / 60.0,
             best_fitness=0.0, median_fitness=0.0,

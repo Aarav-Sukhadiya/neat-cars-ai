@@ -37,7 +37,7 @@ class HumanCar(Car):
 
         # Steering feels better when it's crisp, and flips in reverse
         if abs(self.speed) > 0.5:
-            turn_speed = 3.5
+            turn_speed = 1.75
             steer_dir = 1 if self.speed > 0 else -1
             if keys[pygame.K_a]:
                 self.angle += turn_speed * steer_dir

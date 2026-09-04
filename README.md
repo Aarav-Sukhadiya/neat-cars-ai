@@ -1,118 +1,56 @@
-# Neat Cars
+# NEAT Cars AI
 
-## 📝 Description
+A GPU-accelerated neuroevolution (NEAT) environment where AI cars learn to drive around custom-built, highly complex race tracks using raycast sensors.
 
-Neat cars allows you to draw a track, choose a starting point and watch the magic happen: the cars will drive themselves and constantly improve their driving skills.
-<br>You will also be able to observe the Artificial Neural Network of the best car from the generation.
+## Setup
 
-The project is based on a genetic algorithm called [NEAT (NeuroEvolution of Augmenting Topologies)](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies).
-
-## 🎥 Demo
-
-### Live neural network in the top left corner
-
-![demo](readme-data/nn.gif)
-
-### Track 1: With sensors - Infinite track
-
-https://user-images.githubusercontent.com/52708150/223087114-7d4e0401-bb33-46fd-9673-bd973de7235f.mp4
-
-### Track 2: Without sensors - Finite track
-
-https://user-images.githubusercontent.com/52708150/223087098-0bd16d36-cef2-4773-b657-5471fa1f5baa.mp4
-
-## 💡 How to use
-
-### Prerequisites
-
-* Python 3.7.0+
-
-Get a copy of the Project. Assuming you have git installed, open your Terminal and enter:
+Ensure you have Python 3.11 installed, then install the dependencies into a virtual environment:
 
 ```bash
-git clone 'https://github.com/marcpinet/neat-cars.git'
-```
-
-To install all needed requirements run the following command in the project directory:
-
-```bash
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Running
+## Running the Simulation
 
-After that, you can proceed to start the program by running `main.py`.
+You can start the simulation by running the `main.py` script. We have built several custom flags to control how the AI trains and which track it runs on.
 
-### Controls and tweaks
+### Basic Usage
+```bash
+python main.py
+```
+*Runs the simulation with the UI enabled on the default track.*
 
-Instructions are displayed in the window's title.
+### Command Line Arguments
 
-![title](readme-data/title1.png)
+* `--track <id>`: Select the track to train on. 
+  * `0` = **Massive Loop** (Default). Long straights, smooth curves.
+  * `1` = **Intersection Loop**. Features a 90-degree four-way crossroad to test intersection logic.
+  * `2` = **Super Hard**. Extremely narrow roads, two hairpins, two intersections, and physical obstacles.
+* `--headless`: Run the simulation without the PyGame GUI. This relies entirely on GPU matrix math and removes rendering bottlenecks, allowing you to train generations in seconds instead of minutes.
+* `--infinite`: Bypasses the maximum simulation limit and disables the 50-generation stagnation kill-switch. Use this to let the AI brute-force complex maps overnight.
+* `--target-survival <float>`: Sets an early "Win Condition". If the generation's survival rate reaches this percentage (e.g., `40`), the engine will triumphantly terminate and save the best brains.
 
-You can also see the stats of the current generation in the title...
+### Helpful Examples
 
-![title2](readme-data/title2.png)
+**1. Watch the AI learn on the new Intersection map:**
+```bash
+python main.py --track 1
+```
 
-...and the full stats inside the console.
+**2. Train the AI as fast as possible on the Super Hard map until 40% survive:**
+```bash
+python main.py --track 2 --headless --target-survival 40
+```
 
-![cli_output](readme-data/cli_output.png)
+**3. Leave the AI to train infinitely overnight without giving up:**
+```bash
+python main.py --track 2 --headless --infinite
+```
 
-Feel free to tweak the parameters inside the `ai/config.txt` but also the static variables inside the `Car`, `CarAI` and `Engine` classes.
-For example, you can disable the rendering of the car's sensors by setting `DRAW_SENSORS` to `False` in the `Car` class.
+## How it Works
 
-## ⚙️ How the AI works
-
-The neural network is trained using the NEAT algorithm. The NEAT algorithm is a genetic algorithm which evolves over time from a basic neural network to a more advanced and complex one *depending on your fitness function* by going further and further. Check the [neat-python documentation](https://neat-python.readthedocs.io/en/latest/neat_overview.html) for more infos.
-
-![neat](readme-data/neat_example.gif)
-
-Also, you can find the full mathematic approach and details directly in the [NEAT paper](https://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf).
-
-### Inputs
-
-The main informations the car will use to drive are the distance to the walls in front and next of it. The car has 5 sensors :
-
-- In front,
-- 2 in the diagonals
-- 2 on each side
-
-The sensors are represented by a green line in the rendering. Red means the sensor is detecting a wall.
-
-[![inputs](readme-data/car_sensors.png)](https://marcpinet.me)
-
-### Outputs
-
-The outputs are obviously the car's actions. The car has 4 possible actions:
-
-- Turn left
-- Turn right
-- Accelerate
-- Brake
-
-Note that we have a minimum speed to respect so that the car doesn't stop completely nor drives too slowly.
-
-We get, as a starting point for our neural network, something like this:
-
-![nn](readme-data/neat_cars_init.png)
-
-The algorithm will then create itself the necessary connections (increasing their weight over time) and eventually add hidden layers in the process.
-
-### Fitness
-
-The fitness is quite simple: the more the car drives, the better it is. The fitness is calculated by the distance the car has driven. The car is therefore penalized if it crashes.
-
-## 🐛 Known issues
-
-* Nothing yet!
-
-## 🥅 TO-DO List
-
-* Find a way to allow 8-like tracks
-
-## ✍️ Authors
-
-* **Marc Pinet** - *Initial work* - [marcpinet](https://github.com/marcpinet)
-
-## 📃 License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+* **Hardware:** Each car is equipped with a 7-sensor radar array `[-90°, -45°, -20°, 0°, 20°, 45°, 90°]` that casts rays to detect walls and obstacles.
+* **Brain:** The NEAT algorithm evolves the topology of the neural networks, adding hidden nodes and connections to process sensor data into steering and acceleration commands.
+* **GPU Pipeline:** Raycasting and neural network inference are batched and executed on the GPU using `cupy` and `torch`, allowing 256+ cars to evaluate simultaneously in a fraction of a millisecond per frame.

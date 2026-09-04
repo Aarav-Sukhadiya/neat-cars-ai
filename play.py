@@ -85,6 +85,7 @@ def main():
         
         track_img_path = track_data["image"]
         start_pos = track_data.get("start_pos", [200, 200])
+        start_angle = track_data.get("start_angle", 0)
         checkpoints_path = track_data.get("checkpoints", None)
         
         # We need to find the width/height of the track image. Pygame will do this when loaded.
@@ -115,7 +116,8 @@ def main():
         with open(checkpoints_path, 'r') as f:
             checkpoints = json.load(f)
 
-    car = HumanCar(start_pos, track, checkpoints)
+    car = HumanCar(list(start_pos), track, checkpoints)
+    car.angle = start_angle
 
     font = pygame.font.SysFont(None, 36)
 
@@ -135,7 +137,8 @@ def main():
             # Reset car if dead
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r and not car.alive:
-                    car = HumanCar(start_pos, track, checkpoints)
+                    car = HumanCar(list(start_pos), track, checkpoints)
+                    car.angle = start_angle
 
         # Handle Keyboard Input
         keys = pygame.key.get_pressed()
@@ -223,7 +226,7 @@ def main():
         # Minimap
         minimap_x = WIDTH - SIDEBAR_WIDTH + 20
         minimap_y = HEIGHT - minimap.height - 20
-        cam_rect = pygame.Rect(camera.offset_x, camera.offset_y, camera.width, camera.height)
+        cam_rect = pygame.Rect(cam_x, cam_y, view_w, view_h)
         minimap.draw(screen, [car], cam_rect, (minimap_x, minimap_y))
 
         pygame.display.flip()

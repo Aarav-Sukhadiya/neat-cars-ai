@@ -49,6 +49,7 @@ class Engine:
         
         # Load Track Configuration
         self.track_image_path = "assets/track.png"
+        self.track_mask_path = "assets/track.png"
         self.checkpoints_path = "data/checkpoints.json"
         self.decided_car_pos = [200 - Car.CAR_SIZE_X / 2, 950 - Car.CAR_SIZE_Y / 2]
         
@@ -66,6 +67,7 @@ class Engine:
                 if curr in tracks_dict:
                     track_data = tracks_dict[curr]
                     self.track_image_path = track_data.get("image", self.track_image_path)
+                    self.track_mask_path = track_data.get("mask", self.track_image_path)
                     self.checkpoints_path = track_data.get("checkpoints", self.checkpoints_path)
                     if "start_pos" in track_data:
                         # Center the car on the starting coordinate
@@ -93,10 +95,12 @@ class Engine:
         # Load track image first to get real dimensions
         try:
             track_img = pygame.image.load(self.track_image_path)
+            track_mask_img = pygame.image.load(self.track_mask_path)
             track_w, track_h = track_img.get_size()
         except Exception as e:
             print(f"Warning: Could not load track image: {e}")
             track_img = None
+            track_mask_img = None
             track_w, track_h = 4000, 4000
 
         self.track = Track(track_w, track_h)
@@ -105,6 +109,10 @@ class Engine:
 
         if track_img is not None:
             self.track.surface.blit(track_img, (0, 0))
+            if track_mask_img is not None:
+                self.track.mask_surface.blit(track_mask_img, (0, 0))
+            else:
+                self.track.mask_surface.blit(track_img, (0, 0))
             
         # Give minimap a scaled track preview NOW that the track is loaded
         self.minimap.set_track_surface(self.track.surface)
@@ -266,7 +274,7 @@ class Engine:
             if not self.handle_events():
                 return
 
-            car_ai.compute(self.track.get_surface())
+            car_ai.compute(self.track.mask_surface)
             frame_count += 1
 
             frames_left = max(0, CarAI.MAX_FRAMES - frame_count)

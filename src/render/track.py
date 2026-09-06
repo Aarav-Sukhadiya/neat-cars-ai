@@ -12,6 +12,8 @@ class Track:
         self.height = height
         self.surface = pygame.Surface((width, height))
         self.surface.fill(Color.WHITE)
+        self.mask_surface = pygame.Surface((width, height))
+        self.mask_surface.fill(Color.WHITE)
         self.brush_size = 50
         self.last_position = None
 
@@ -21,6 +23,7 @@ class Track:
             self.draw_interpolated(self.last_position, position, color)
         else:
             pygame.draw.circle(self.surface, color, position, self.brush_size)
+            pygame.draw.circle(self.mask_surface, color, position, self.brush_size)
         self.last_position = position
         
     def adjust_brush_size(self, amount: int):
@@ -35,9 +38,13 @@ class Track:
             x = int(start[0] + float(i) / distance * dx)
             y = int(start[1] + float(i) / distance * dy)
             pygame.draw.circle(self.surface, color, (x, y), self.brush_size)
+            pygame.draw.circle(self.mask_surface, color, (x, y), self.brush_size)
 
     def reset_last_position(self):
         self.last_position = None
 
     def get_surface(self) -> pygame.Surface:
         return self.surface
+    
+    def get_mask_surface(self) -> pygame.Surface:
+        return self.mask_surface

@@ -11,19 +11,18 @@ def main():
 
     img_path = sys.argv[1]
     pygame.init()
+    info = pygame.display.Info()
+    SCREEN_W = min(1280, int(info.current_w * 0.95))
+    SCREEN_H = min(720, int(info.current_h * 0.95))
+    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 
     try:
         track_img = pygame.image.load(img_path).convert_alpha()
     except Exception as e:
         print(f"Failed to load image: {e}")
         sys.exit(1)
-
+        
     W, H = track_img.get_size()
-    info = pygame.display.Info()
-    SCREEN_W = min(1280, int(info.current_w * 0.95))
-    SCREEN_H = min(720, int(info.current_h * 0.95))
-
-    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption("Manual Checkpoint Editor")
     font = pygame.font.SysFont("monospace", 16)
 

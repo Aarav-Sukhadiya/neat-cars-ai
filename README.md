@@ -4,7 +4,7 @@ A GPU-accelerated neuroevolution (NEAT) environment where AI cars learn to drive
 
 ## Setup
 
-Ensure you have Python 3.11 installed, then install the dependencies into a virtual environment:
+Ensure you have Python 3.11+ installed, then install the dependencies into a virtual environment:
 
 ```bash
 python -m venv venv
@@ -24,13 +24,15 @@ python main.py
 
 ### Command Line Arguments
 
+Tracks are dynamically loaded from `config/track_config.json`. By default, the following tracks are available:
 * `--track <id>`: Select the track to train on. 
-  * `0` = **Massive Loop** (Default). Long straights, smooth curves.
+  * `0` = **Massive Loop**. Long straights, smooth curves.
   * `1` = **Intersection Loop**. Features a 90-degree four-way crossroad to test intersection logic.
   * `2` = **Super Hard**. Extremely narrow roads, two hairpins, two intersections, and physical obstacles.
+  * `3` = **NoLoopNoObstacle**. A large imported real-world style circuit.
 * `--headless`: Run the simulation without the PyGame GUI. This relies entirely on GPU matrix math and removes rendering bottlenecks, allowing you to train generations in seconds instead of minutes.
 * `--infinite`: Bypasses the maximum simulation limit and disables the 50-generation stagnation kill-switch. Use this to let the AI brute-force complex maps overnight.
-* `--target-survival <float>`: Sets an early "Win Condition". If the generation's survival rate reaches this percentage (e.g., `40`), the engine will triumphantly terminate and save the best brains.
+* `--target-survival <float>`: Sets an early "Win Condition". If the generation's survival rate reaches this percentage (e.g., `40`), the engine will terminate and save the best brains.
 
 ### Helpful Examples
 
@@ -49,8 +51,47 @@ python main.py --track 2 --headless --target-survival 40
 python main.py --track 2 --headless --infinite
 ```
 
-## How it Works
+## Manual Driving Mode
 
-* **Hardware:** Each car is equipped with a 7-sensor radar array `[-90°, -45°, -20°, 0°, 20°, 45°, 90°]` that casts rays to detect walls and obstacles.
-* **Brain:** The NEAT algorithm evolves the topology of the neural networks, adding hidden nodes and connections to process sensor data into steering and acceleration commands.
-* **GPU Pipeline:** Raycasting and neural network inference are batched and executed on the GPU using `cupy` and `torch`, allowing 256+ cars to evaluate simultaneously in a fraction of a millisecond per frame.
+Want to test the tracks yourself? Run the manual play script:
+```bash
+python play.py --track 3
+```
+* Use **W, A, S, D** to drive the car.
+* Use **Scroll Wheel** to zoom in and out of the massive tracks seamlessly.
+
+## Track Creation & Tools
+
+We provide several robust tools in the `tools/` directory to create and import custom maps:
+
+### 1. Manual Checkpoint Editor
+Have an image of a race track (e.g., an F1 circuit) that you want the AI to learn? Import it and manually place the checkpoints:
+```bash
+python tools/manual_checkpoint_tool.py assets/tracks/your_track.png
+```
+* **WASD** to pan the camera across huge maps.
+* **+ / -** to adjust checkpoint length.
+* **Hold Right Click** to perfectly rotate the checkpoint line.
+* **Left Click** to stamp the checkpoint.
+* **U** to undo.
+* **ENTER** to save the track. This automatically generates the JSON data and registers your new track into `config/track_config.json`!
+
+### 2. Track Editor
+Draw massive 8000x8000 tracks entirely from scratch using smooth Catmull-Rom splines:
+```bash
+python tools/track_editor.py
+```
+Click to place nodes, and the tool will render the curved roads and auto-generate geometrically perfect perpendicular checkpoints.
+
+### 3. Auto Importer
+Attempts to automatically crawl a track image (BFS algorithm) to find the centerline and generate checkpoints via raycasting.
+```bash
+python tools/auto_import.py assets/tracks/your_track.png
+```
+
+## Technical Architecture & Optimizations
+
+* **Vectorized Physics:** Pygame object loops were replaced with highly parallel NumPy matrix mathematics (`src/ai/vector_physics.py`), evaluating thousands of cars instantly.
+* **GPU Vision:** Sensor raycasting uses a custom CuPy/CUDA GPU kernel (`src/gpu/gpu_raycast.py`). It avoids CPU pixel-walking by processing all `Cars x Rays` on the GPU simultaneously.
+* **Subsurface Rendering:** Huge 8000x8000 maps are not scaled in full; instead, a Pygame Subsurface viewport follows the car, enabling buttery-smooth 60 FPS panning and zooming. 
+* **Data-Driven Configuration:** Track logic and starting angles are never hardcoded. All map settings exist in `config/track_config.json`.

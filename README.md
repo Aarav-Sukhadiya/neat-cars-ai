@@ -2,96 +2,101 @@
 
 A GPU-accelerated neuroevolution (NEAT) environment where AI cars learn to drive around custom-built, highly complex race tracks using raycast sensors.
 
+Each car sees the world through 7 distance sensors and picks one of 4 actions (left, right, accelerate, brake) every frame. A population of 1024 networks is evolved with [neat-python](https://github.com/CodeReclaimers/neat-python), and fitness is measured by progress through the track's checkpoints.
+
+📖 **Docs:** [User guide](docs/USER_GUIDE.md) · [Architecture & internals](docs/ARCHITECTURE.md) · [Track authoring guide](docs/TRACKS.md) · [Code audit: bugs fixed & optimisations](docs/AUDIT.md)
+
 ## Setup
 
-Ensure you have Python 3.11+ installed, then install the dependencies into a virtual environment:
+Python 3.11+ is required. Install the dependencies into a virtual environment:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt          # add -r requirements-dev.txt for the test suite
 ```
+
+* **GPU acceleration is optional.** Without PyTorch the networks run through neat-python, and without CuPy the sensors are raycast with NumPy. Install the CuPy wheel that matches your CUDA version (`cupy-cuda12x`, `cupy-cuda11x`, ...).
+* **pygame must have PNG support.** Check with `python -c "import pygame; print(pygame.image.get_extended())"`. If it prints `False` (it can happen with source builds on new Python versions), install `pygame-ce` instead.
+* If your Python install changes (for example a version manager moves "latest"), recreate the venv: it pins the interpreter it was created with.
 
 ## Running the Simulation
 
-You can start the simulation by running the `main.py` script. We have built several custom flags to control how the AI trains and which track it runs on.
-
-### Basic Usage
 ```bash
 python main.py
 ```
-*Runs the simulation with the UI enabled on the default track.*
+*Trains with the GUI on the `current_track` from `config/track_config.json`.*
 
 ### Command Line Arguments
 
-Tracks are dynamically loaded from `config/track_config.json`. By default, the following tracks are available:
-* `--track <id>`: Select the track to train on. 
-  * `0` = **Massive Loop**. Long straights, smooth curves.
-  * `1` = **Intersection Loop**. Features a 90-degree four-way crossroad to test intersection logic.
-  * `2` = **Super Hard**. Extremely narrow roads, two hairpins, two intersections, and physical obstacles.
-  * `3` = **NoLoopNoObstacle**. A large imported real-world style circuit.
-* `--headless`: Run the simulation without the PyGame GUI. This relies entirely on GPU matrix math and removes rendering bottlenecks, allowing you to train generations in seconds instead of minutes.
-* `--infinite`: Bypasses the maximum simulation limit and disables the 50-generation stagnation kill-switch. Use this to let the AI brute-force complex maps overnight.
-* `--target-survival <float>`: Sets an early "Win Condition". If the generation's survival rate reaches this percentage (e.g., `40`), the engine will terminate and save the best brains.
+| Flag | Meaning |
+|---|---|
+| `--track <id>` | Track index in `config/track_config.json` (see `python main.py --help`). |
+| `--headless` | No window: progress is printed to the terminal, and generations run much faster. |
+| `--visual` | GUI mode (the default). |
+| `--infinite` | No generation limit and no 50-generation stagnation stop. Good for overnight runs. |
+| `--target-survival <pct>` | Stop once a generation's survival rate reaches this percentage, and save the best brain. |
 
-### Helpful Examples
+Default tracks:
 
-**1. Watch the AI learn on the new Intersection map:**
+| ID | Name | Notes |
+|---|---|---|
+| `0` | Massive Loop | Long straights, smooth curves. |
+| `1` | Intersection Loop | A 90° four-way crossroad that tests intersection handling. |
+| `2` | Super Hard | Narrow roads, two hairpins, two intersections, physical obstacles. |
+| `3` | NoLoopNoObstacle | Imported real-world-style circuit. Its checkpoint data needs cleanup (see [AUDIT](docs/AUDIT.md#known-issues)). |
+
+### Examples
+
 ```bash
-python main.py --track 1
+python main.py --track 1                                  # watch the AI learn the intersection map
+python main.py --track 2 --headless --target-survival 40  # train fast until 40% survive
+python main.py --track 2 --headless --infinite            # leave it running overnight
 ```
 
-**2. Train the AI as fast as possible on the Super Hard map until 40% survive:**
-```bash
-python main.py --track 2 --headless --target-survival 40
-```
+### Outputs
 
-**3. Leave the AI to train infinitely overnight without giving up:**
-```bash
-python main.py --track 2 --headless --infinite
-```
+| File | Written |
+|---|---|
+| `data/hall_of_fame.pkl` | After every generation: the 16 best distinct genomes ever seen. Loaded at start-up and injected into generation 0. |
+| `data/best_car_brain.pkl` | When training ends (generation limit, target reached, or stagnation). |
+| `data/neat_checkpoints/` | GUI mode only: neat-python checkpoints every 5 generations. |
 
 ## Manual Driving Mode
 
-Want to test the tracks yourself? Run the manual play script:
 ```bash
-python play.py --track 3
+python play.py --track 3           # god mode (no crashes)
+python play.py --track 2 --crash   # with wall collisions; press R to respawn
 ```
-* Use **W, A, S, D** to drive the car.
-* Use **Scroll Wheel** to zoom in and out of the massive tracks seamlessly.
+* **W / A / S / D** to drive, and the **scroll wheel** to zoom.
+* The sidebar shows your fitness and checkpoint count, scored the same way as the AI. The next checkpoint is highlighted in yellow.
 
 ## Track Creation & Tools
 
-We provide several robust tools in the `tools/` directory to create and import custom maps:
+See the **[track authoring guide](docs/TRACKS.md)** for the file formats and the full workflow.
 
-### 1. Manual Checkpoint Editor
-Have an image of a race track (e.g., an F1 circuit) that you want the AI to learn? Import it and manually place the checkpoints:
-```bash
-python tools/manual_checkpoint_tool.py assets/tracks/your_track.png
-```
-* **WASD** to pan the camera across huge maps.
-* **+ / -** to adjust checkpoint length.
-* **Hold Right Click** to perfectly rotate the checkpoint line.
-* **Left Click** to stamp the checkpoint.
-* **U** to undo.
-* **ENTER** to save the track. This automatically generates the JSON data and registers your new track into `config/track_config.json`!
+| Tool | Purpose |
+|---|---|
+| `tools/track_editor.py` | Draw an 8000×8000 track from scratch with Catmull-Rom splines; auto-generates checkpoints and registers the `custom` track. |
+| `tools/manual_checkpoint_tool.py <image>` | Place checkpoints by hand on any track image (WASD pan, +/- length, hold right-click to rotate, left-click to place, U undo, **ENTER** save). |
+| `tools/auto_import.py <image>` | Click along the road; nodes snap to the centre and wall-to-wall checkpoints are generated automatically. |
+| `tools/validate_track.py [ids...]` | Checks registered tracks: start pose vs. walls, checkpoint gaps, crossed or oversized checkpoints. **Run it after creating a track.** |
+| `tools/create_*.py` | Scripts that generated the built-in tracks. |
 
-### 2. Track Editor
-Draw massive 8000x8000 tracks entirely from scratch using smooth Catmull-Rom splines:
-```bash
-python tools/track_editor.py
-```
-Click to place nodes, and the tool will render the curved roads and auto-generate geometrically perfect perpendicular checkpoints.
+## Testing
 
-### 3. Auto Importer
-Attempts to automatically crawl a track image (BFS algorithm) to find the centerline and generate checkpoints via raycasting.
 ```bash
-python tools/auto_import.py assets/tracks/your_track.png
+pip install -r requirements-dev.txt
+python -m pytest -q
 ```
+The suite runs headless (SDL dummy driver). The GPU tests need CUDA and fail without it.
 
 ## Technical Architecture & Optimizations
 
-* **Vectorized Physics:** Pygame object loops were replaced with highly parallel NumPy matrix mathematics (`src/ai/vector_physics.py`), evaluating thousands of cars instantly.
-* **GPU Vision:** Sensor raycasting uses a custom CuPy/CUDA GPU kernel (`src/gpu/gpu_raycast.py`). It avoids CPU pixel-walking by processing all `Cars x Rays` on the GPU simultaneously.
-* **Subsurface Rendering:** Huge 8000x8000 maps are not scaled in full; instead, a Pygame Subsurface viewport follows the car, enabling buttery-smooth 60 FPS panning and zooming. 
-* **Data-Driven Configuration:** Track logic and starting angles are never hardcoded. All map settings exist in `config/track_config.json`.
+* **Vectorized Physics:** All cars live in flat NumPy arrays (`src/ai/vector_physics.py`), and one frame for the whole population is a handful of array operations.
+* **GPU Vision:** A custom CuPy/CUDA kernel (`src/gpu/gpu_raycast.py`) marches all `cars × 7` rays in parallel, with one thread per ray and a single device→host copy per frame.
+* **GPU Brains:** All networks of a generation are packed into one dense tensor and evaluated with batched matmuls (`src/gpu/gpu_inference.py`). This is mathematically exact versus neat-python, and runs only as many iterations as the deepest network needs.
+* **Subsurface Rendering:** Huge maps are never scaled in full. Only the visible viewport is drawn, and off-screen cars are culled.
+* **Data-Driven Configuration:** Every per-track setting lives in `config/track_config.json`.
+
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

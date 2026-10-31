@@ -1,5 +1,4 @@
 import unittest
-import pygame
 from src.render.camera import Camera
 
 class TestCamera(unittest.TestCase):

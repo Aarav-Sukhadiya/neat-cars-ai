@@ -1,9 +1,8 @@
 import json
 import os
 import pygame
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 from src.render.engine import Engine
-from src.render.track import Track
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 

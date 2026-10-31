@@ -1,8 +1,19 @@
+"""Place checkpoints on a track image by hand and register the track.
+
+    python tools/manual_checkpoint_tool.py assets/tracks/<name>.png
+
+WASD pan, +/- length, hold right-click rotate, left-click place, U undo, ENTER save.
+Saves data/tracks/<name>.json and adds/updates the <name> entry in config/track_config.json
+(start pose = just behind the first checkpoint, heading towards the second).
+"""
+
 import pygame
 import sys
 import json
 import math
 import os
+
+SPAWN_BEHIND_CP0 = 40   # px; the car spawns this far before the start line
 
 def main():
     if len(sys.argv) < 2:
@@ -102,7 +113,7 @@ def main():
             "Hold Right Click: Rotate Checkpoint",
             "Left Click: Place Checkpoint",
             "U: Undo last checkpoint",
-            "ENTER / S: Save & Exit"
+            "ENTER: Save & Exit"
         ]
         
         # Dark HUD background
@@ -123,7 +134,7 @@ def main():
                 if event.key == pygame.K_u:
                     if checkpoints:
                         checkpoints.pop()
-                elif event.key == pygame.K_RETURN or event.key == pygame.K_s:
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     if not checkpoints:
                         print("No checkpoints added. Exiting without saving.")
                         running = False
@@ -157,12 +168,20 @@ def main():
                         else:
                             angle = 0
                             
+                        # Spawn a little BEHIND checkpoint 0: a car that starts exactly on the
+                        # line never registers crossing it, and then starves.
+                        mid_x = (checkpoints[0][0] + checkpoints[0][2]) / 2
+                        mid_y = (checkpoints[0][1] + checkpoints[0][3]) / 2
+                        heading = math.radians(360 - angle)
+                        start_pos = [int(round(mid_x - math.cos(heading) * SPAWN_BEHIND_CP0)),
+                                     int(round(mid_y - math.sin(heading) * SPAWN_BEHIND_CP0))]
+
                         cfg["tracks"][base_name] = {
                             "name": base_name.replace("_", " ").title(),
                             "image": img_path,
                             "checkpoints": save_path,
                             "max_frames": 7200,
-                            "start_pos": [int(checkpoints[0][0]+checkpoints[0][2])//2, int(checkpoints[0][1]+checkpoints[0][3])//2],
+                            "start_pos": start_pos,
                             "start_angle": angle
                         }
                         
@@ -170,7 +189,7 @@ def main():
                             json.dump(cfg, f, indent=4)
                         print(f"Updated config/track_config.json with track: {base_name}")
                         
-                    running = False
+                    pygame.quit()
                     sys.exit(0)
                     
         clock.tick(60)

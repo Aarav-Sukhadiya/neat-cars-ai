@@ -20,16 +20,16 @@ class NN:
         self.pos = (int(pos[0]+Node.RADIUS), int(pos[1]))
         input_names = ["-90°", "-45°", "-20°", "0°", "20°", "45°", "90°"]
         output_names = ["Left", "Right", "Accelerate", "Brake"]
-        hidden_nodes = [n for n in genome.nodes.keys()]
+        hidden_nodes = list(genome.nodes.keys())   # outputs are removed below
         node_id_list = []
 
         # nodes
         h = (NN.INPUT_NEURONS-1)*(Node.RADIUS*2 + Node.SPACING)
-        for i, input in enumerate(config.genome_config.input_keys):
-            n = Node(input, pos[0], pos[1]+int(-h/2 + i*(Node.RADIUS*2 + Node.SPACING)), NodeType.INPUT, [
+        for i, input_key in enumerate(config.genome_config.input_keys):
+            n = Node(input_key, pos[0], pos[1]+int(-h/2 + i*(Node.RADIUS*2 + Node.SPACING)), NodeType.INPUT, [
                      Color.GREEN_PALE, Color.GREEN, Color.DARK_GREEN_PALE, Color.DARK_GREEN], input_names[i], i)
             self.nodes.append(n)
-            node_id_list.append(input)
+            node_id_list.append(input_key)
 
         h = (NN.OUTPUT_NEURONS-1)*(Node.RADIUS*2 + Node.SPACING)
         for i, out in enumerate(config.genome_config.output_keys):
@@ -47,16 +47,15 @@ class NN:
             node_id_list.append(m)
 
         # connections
+        node_by_id = dict(zip(node_id_list, self.nodes))
         self.connections = []
         for c in genome.connections.values():
             if c.enabled:
-                input_, output = c.key
-                try:
-                    in_node = self.nodes[node_id_list.index(input_)]
-                    out_node = self.nodes[node_id_list.index(output)]
+                in_node = node_by_id.get(c.key[0])
+                out_node = node_by_id.get(c.key[1])
+                if in_node is not None and out_node is not None:
                     self.connections.append(Connection(in_node, out_node, c.weight))
-                except ValueError:
-                    pass
+
     def draw(self, screen: pygame.Surface):
         for c in self.connections:
             c.draw(screen)

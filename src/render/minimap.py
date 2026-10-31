@@ -1,10 +1,14 @@
+"""Scaled-down overview of the whole track with car dots and the camera rectangle."""
+
 import pygame
 from src.render.colors import Color
 
+
 class Minimap:
     def __init__(self, width: int, height: int, track_width: int, track_height: int):
-        self.width = width
-        self.height = height
+        self.width = int(width)
+        self.height = int(height)
+        width, height = self.width, self.height
         self.track_width = track_width
         self.track_height = track_height
         
@@ -44,7 +48,6 @@ class Minimap:
         
     def draw(self, screen: pygame.Surface, cars: list, camera_rect: pygame.Rect, dest_pos: tuple[int, int]) -> None:
         """Draw the minimap and blit it to the screen."""
-        # pragma: no cover
         if self.track_preview:
             self.surface.blit(self.track_preview, (0, 0))
         else:
@@ -56,12 +59,11 @@ class Minimap:
         cam_h = int(camera_rect.height * self.scale_y)
         pygame.draw.rect(self.surface, Color.WHITE, (cam_x, cam_y, cam_w, cam_h), 1)
             
-        # Draw cars on minimap
+        # Cars: alive = green, crashed = red (left where they died)
         for car in cars:
-            if not getattr(car, 'has_been_rendered_as_dead', False) or getattr(car, 'alive', False):
-                mx, my = self.world_to_minimap(car.center)
-                color = Color.GREEN if car.alive else Color.RED
-                pygame.draw.circle(self.surface, color, (mx, my), 2)
+            mx, my = self.world_to_minimap(car.center)
+            color = Color.GREEN if car.alive else Color.RED
+            pygame.draw.circle(self.surface, color, (mx, my), 2)
                 
         # Draw a border around the minimap
         pygame.draw.rect(self.surface, Color.WHITE, (0, 0, self.width, self.height), 2)

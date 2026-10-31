@@ -1,6 +1,7 @@
-pygame
-neat-python
-numpy
-# GPU acceleration (CUDA 12.x required; install manually if auto-install fails)
-torch
-cupy
+pygame>=2.5          # needs PNG support (pygame.image.get_extended() must be True)
+neat-python>=0.92
+numpy>=1.24
+
+# GPU acceleration (optional: the code falls back to CPU if these are missing)
+torch                # NN inference; any build works, CUDA build for GPU
+cupy-cuda12x         # raycasting kernel; pick the wheel matching your CUDA (cupy-cuda11x, ...)

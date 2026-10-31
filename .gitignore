@@ -1,8 +1,17 @@
-# Auto-generated folders
+# Environments / editors
 .git/
 .vscode/
 .env/
-__pycache__/
-
 venv/
+.venv/
+
+# Python / test artefacts
+__pycache__/
+*.pyc
 .pytest_cache/
+.coverage
+htmlcov/
+
+# neat-python training checkpoints (written by main.py in GUI mode)
+neat-checkpoint-*
+data/neat_checkpoints/

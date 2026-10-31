@@ -34,16 +34,16 @@
             ],
             "start_angle": 0
         },
-        "custom": {
+        "no_loop": {
             "name": "NoLoopNoObstacle",
             "image": "assets/tracks/no_loop.png",
             "checkpoints": "data/tracks/no_loop.json",
             "max_frames": 7200,
             "start_pos": [
-                100,
-                400
+                107,
+                476
             ],
-            "start_angle": 0
+            "start_angle": 70
         }
     }
 }

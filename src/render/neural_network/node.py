@@ -26,7 +26,7 @@ class Node:
     CONNECTION_WIDTH = 1
     FONT = pygame.font.SysFont("comicsans", 15)
 
-    def __init__(self, id: int, x: int, y: int, type: NodeType, colors: list[Color], label: str = "", index: int = 0):
+    def __init__(self, id: int, x: int, y: int, type: int, colors: list, label: str = "", index: int = 0):
         self.id = id
         self.x = x
         self.y = y
@@ -34,7 +34,7 @@ class Node:
         self.colors = colors
         self.label = label
         self.index = index
-        self.inputs = [0, 0, 0, 0, 0]
+        self.inputs = [0] * 7   # one per sensor; replaced by the live input row
         self.output = None
 
     def draw(self, screen: pygame.Surface):

@@ -1,10 +1,18 @@
-import pygame
+"""Draw a large (8000x8000) spline track from scratch.
+
+    python tools/track_editor.py
+
+Left click places spline nodes; S renders the road to assets/tracks/custom.png,
+generates perpendicular checkpoints into data/tracks/custom.json and registers
+(or updates) the "custom" entry in config/track_config.json.
+"""
+
+import json
 import math
-import numpy as np
-import json
-import sys
-import json
 import os
+
+import numpy as np
+import pygame
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -69,6 +77,8 @@ def save_track(closed):
     for i in range(len(spline)-1):
         draw_thick_line(surf, spline[i], spline[i+1], road_width)
         
+    os.makedirs("assets/tracks", exist_ok=True)
+    os.makedirs("data/tracks", exist_ok=True)
     pygame.image.save(surf, "assets/tracks/custom.png")
     
     checkpoints = []
@@ -92,23 +102,26 @@ def save_track(closed):
     with open("data/tracks/custom.json", "w") as f:
         json.dump(checkpoints, f, indent=4)
         
-    # Update config automatically
+    # Register / update the "custom" track entry (always pointing at the files written above).
     config_path = "config/track_config.json"
-    if os.path.exists(config_path) and nodes:
+    cfg = {"tracks": {}}
+    if os.path.exists(config_path):
         with open(config_path, "r") as f:
             cfg = json.load(f)
-        if "custom" in cfg["tracks"]:
-            cfg["tracks"]["custom"]["start_pos"] = [int(nodes[0][0]), int(nodes[0][1])]
-            # Guess starting angle based on first 2 nodes
-            if len(nodes) > 1:
-                dx = nodes[1][0] - nodes[0][0]
-                dy = nodes[1][1] - nodes[0][1]
-                angle = math.degrees(math.atan2(-dy, dx))
-                cfg["tracks"]["custom"]["start_angle"] = int(angle)
-            with open(config_path, "w") as f:
-                json.dump(cfg, f, indent=4)
-                
-    print("Saved custom.png and custom.json! You can now run: python main.py --track 3")
+    entry = cfg.setdefault("tracks", {}).setdefault("custom", {"name": "Custom", "max_frames": 7200})
+    entry["image"] = "assets/tracks/custom.png"
+    entry["checkpoints"] = "data/tracks/custom.json"
+    if nodes:
+        entry["start_pos"] = [int(nodes[0][0]), int(nodes[0][1])]
+    if len(nodes) > 1:
+        dx = nodes[1][0] - nodes[0][0]
+        dy = nodes[1][1] - nodes[0][1]
+        entry["start_angle"] = int(math.degrees(math.atan2(-dy, dx)))
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=4)
+
+    track_id = list(cfg["tracks"]).index("custom")
+    print(f"Saved custom.png and custom.json! You can now run: python main.py --track {track_id}")
 
 running = True
 closed = False
@@ -213,7 +226,7 @@ while running:
         "Ctrl+Z: Undo Node",
         f"C: Toggle Closed Loop ({'ON' if closed else 'OFF'})",
         f"+/-: Road Width ({road_width})",
-        "S: Save Track to ID 99"
+        "S: Save as 'custom' track"
     ]
     for i, text in enumerate(info):
         s = font.render(text, True, (255, 255, 255))

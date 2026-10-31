@@ -1,6 +1,5 @@
 import sys
 import json
-import math
 import os
 from unittest.mock import patch
 
@@ -99,3 +98,50 @@ def test_scale_and_rotate(setup_dummy_image):
          patch('pygame.event.get', side_effect=events), \
          patch.object(sys, 'argv', ['manual_checkpoint_tool.py', setup_dummy_image]):
         manual_checkpoint_tool.main()
+
+
+def test_s_key_pans_but_does_not_save(setup_dummy_image):
+    """Regression: KEYDOWN S (also 'pan down') used to save the track and exit."""
+    import collections
+    keys = collections.defaultdict(bool)
+    keys[pygame.K_s] = True
+    events = [
+        [pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'button': 1, 'pos': (100, 100)})],
+        [pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_s})],
+        [pygame.event.Event(pygame.QUIT)],
+    ]
+    with patch('pygame.key.get_pressed', return_value=keys), \
+         patch('pygame.event.get', side_effect=events), \
+         patch('manual_checkpoint_tool.json.dump') as dump, \
+         patch.object(sys, 'argv', ['manual_checkpoint_tool.py', setup_dummy_image]):
+        manual_checkpoint_tool.main()   # returns normally (no SystemExit)
+    dump.assert_not_called()
+
+
+def test_saved_start_is_behind_first_checkpoint(setup_dummy_image, tmp_path, monkeypatch):
+    """Regression: start_pos was the midpoint of checkpoint 0, so it was never crossed."""
+    import collections
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "track_config.json").write_text('{"tracks": {}}')
+    keys = collections.defaultdict(bool)
+    # Two vertical checkpoints (angle 90 => line along +y), second one 200 px to the right.
+    events = [
+        [pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'button': 1})],
+        [pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'button': 1})],
+        [pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_RETURN})],
+    ]
+    mouse = iter([(300, 300)] * 2 + [(500, 300)] * 100)
+    with patch('pygame.key.get_pressed', return_value=keys), \
+         patch('pygame.mouse.get_pos', side_effect=lambda: next(mouse)), \
+         patch('pygame.event.get', side_effect=events), \
+         patch.object(sys, 'argv', ['manual_checkpoint_tool.py', setup_dummy_image]):
+        with pytest.raises(SystemExit):
+            manual_checkpoint_tool.main()
+    cfg = json.loads((tmp_path / "config" / "track_config.json").read_text())
+    entry = next(iter(cfg["tracks"].values()))
+    with open(entry["checkpoints"]) as f:
+        cps = json.load(f)
+    mid_x = (cps[0][0] + cps[0][2]) / 2
+    assert entry["start_angle"] == 0                       # heading right, towards checkpoint 1
+    assert entry["start_pos"][0] == round(mid_x) - manual_checkpoint_tool.SPAWN_BEHIND_CP0

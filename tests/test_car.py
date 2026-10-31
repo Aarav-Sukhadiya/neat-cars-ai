@@ -1,9 +1,7 @@
 import unittest
 import pygame
 import math
-import os
 from src.render.car import Car
-from src.render.track import Track
 
 class MockTrack:
     def __init__(self, width=1000, height=1000):
